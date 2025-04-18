@@ -1,18 +1,28 @@
 import SwiftUI
-import FirebaseCore
+import Firebase
 
 @main
 struct CocukGelisimApp: App {
-    
-    // Firebase'i başlatan init fonksiyonu
+    @StateObject private var loginVM = LoginViewModel()
+
     init() {
-        
-        FirebaseApp.configure()
+        FirebaseApp.configure() // ✅ Firebase burada başlatılıyor
     }
 
     var body: some Scene {
         WindowGroup {
-            LoginView()
+            NavigationStack {
+                if loginVM.isLoggedIn {
+                    if loginVM.isTeacher {
+                        AdminMainView()
+                    } else {
+                        VeliTabView()
+                    }
+                } else {
+                    LoginView()
+                }
+            }
+            .environmentObject(loginVM)
         }
     }
 }

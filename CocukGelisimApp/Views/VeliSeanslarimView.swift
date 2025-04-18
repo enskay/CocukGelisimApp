@@ -50,12 +50,10 @@ struct VeliSeanslarimView: View {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let db = Firestore.firestore()
 
-        // 1. Veli belgesinden öğrenci_id'yi al
         db.collection("veliler").document(uid).getDocument { veliDoc, error in
             guard let data = veliDoc?.data(),
                   let ogrenciID = data["ogrenci_id"] as? String else { return }
 
-            // 2. Seansları bu öğrenci_id ile getir
             db.collection("seanslar")
                 .whereField("ogrenci_id", isEqualTo: ogrenciID)
                 .getDocuments { snapshot, error in
@@ -63,22 +61,23 @@ struct VeliSeanslarimView: View {
 
                     self.seanslar = docs.compactMap { doc in
                         let d = doc.data()
+                        let tarihStr = d["tarih"] as? String ?? "-"
+
                         return Seans(
                             id: doc.documentID,
-                            ogrenciIsmi: data["ogrenci_ismi"] as? String ?? "-",
-                            tarih: data["tarih"] as? String ?? "-",
-                            saat: data["saat"] as? String ?? "--:--",
-                            tur: data["tur"] as? String ?? "-",
-                            durum: data["durum"] as? String ?? "bekliyor",
-                            onaylandi: data["onaylandi"] as? Bool ?? false,
-                            neden: data["neden"] as? String,
-                            ogrenciID: data["ogrenci_id"] as? String ?? ""
+                            ogrenciIsmi: d["ogrenci_ismi"] as? String ?? "-",
+                            tarih: tarihStr,
+                            saat: d["saat"] as? String ?? "--:--",
+                            tur: d["tur"] as? String ?? "-",
+                            durum: d["durum"] as? String ?? "bekliyor",
+                            onaylandi: d["onaylandi"] as? Bool ?? false,
+                            neden: d["neden"] as? String,
+                            ogrenciID: d["ogrenci_id"] as? String ?? ""
                         )
                     }
                 }
         }
     }
-
     private func seansiGuncelle(seansID: String) {
         let db = Firestore.firestore()
         let yeniDurum = selectedDurum[seansID] ?? "bekliyor"

@@ -35,5 +35,5 @@ class AdminSeansListViewModel: ObservableObject {
                 }
             }
         }
-    }
+    }//f
 }

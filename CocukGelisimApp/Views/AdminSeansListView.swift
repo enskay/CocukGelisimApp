@@ -4,7 +4,7 @@ import FirebaseFirestore
 struct AdminSeansListView: View {
     @State private var seanslar: [Seans] = []
     @StateObject private var viewModel = AdminSeansListViewModel()
-
+    
     var body: some View {
         List(seanslar) { seans in
             VStack(alignment: .leading, spacing: 6) {
@@ -12,12 +12,12 @@ struct AdminSeansListView: View {
                 Text("📅 Tarih: \(seans.tarih)")
                 Text("🕒 Saat: \(seans.saat)")
                 Text("📌 Durum: \(seans.durum.capitalized)")
-
+                
                 if let neden = seans.neden, !neden.isEmpty {
                     Text("📝 Neden: \(neden)")
                         .foregroundColor(.gray)
                 }
-
+                
                 HStack {
                     Button("Katıldı") {
                         viewModel.seansDurumuGuncelle(
@@ -26,7 +26,7 @@ struct AdminSeansListView: View {
                             ogrenciID: seans.ogrenciID
                         )
                     }
-
+                    
                     Button("Ertelendi") {
                         viewModel.seansDurumuGuncelle(
                             seansID: seans.id,
@@ -34,7 +34,7 @@ struct AdminSeansListView: View {
                             ogrenciID: seans.ogrenciID
                         )
                     }
-
+                    
                     Button("Gelmedi") {
                         viewModel.seansDurumuGuncelle(
                             seansID: seans.id,
@@ -54,18 +54,20 @@ struct AdminSeansListView: View {
             seanslariYukle()
         }
     }
-
+    
     private func seanslariYukle() {
         let db = Firestore.firestore()
         db.collection("seanslar").getDocuments { snapshot, error in
             guard let docs = snapshot?.documents else { return }
-
+            
             self.seanslar = docs.compactMap { doc in
                 let data = doc.data()
+                let tarihStr = data["tarih"] as? String ?? "-"
+                
                 return Seans(
                     id: doc.documentID,
                     ogrenciIsmi: data["ogrenci_ismi"] as? String ?? "-",
-                    tarih: data["tarih"] as? String ?? "-",
+                    tarih: tarihStr,
                     saat: data["saat"] as? String ?? "--:--",
                     tur: data["tur"] as? String ?? "-",
                     durum: data["durum"] as? String ?? "bekliyor",
@@ -76,4 +78,5 @@ struct AdminSeansListView: View {
             }
         }
     }
+        
 }

@@ -1,123 +1,100 @@
-//
-//  VeliTakvimView.swift
-//  CocukGelisimApp
-//
-//  Created by Enes  on 7.04.2025.
-//
-
-
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
 struct VeliTakvimView: View {
-    @State private var doluTarihler: [String] = []
-    @State private var secilenTarih = Date()
-    @State private var neden = ""
-
-    @State private var gosterTalepFormu = false
-    @State private var ogrenciID = ""
-    @State private var ogrenciIsmi = ""
+    @State private var secilenTarih: Date = Date()
+    @State private var doluGun: Bool = false
+    @State private var neden: String = ""
+    @State private var talepOlusturuldu = false
+    @State private var hataMesaji = ""
 
     var body: some View {
         VStack(spacing: 20) {
             DatePicker("Tarih Seç", selection: $secilenTarih, displayedComponents: .date)
                 .datePickerStyle(.graphical)
 
-            if doluGunMu(tarih: secilenTarih) {
-                Text("❌ Bu gün dolu").foregroundColor(.red)
+            if doluGun {
+                Text("⚠️ Bu tarihte zaten bir seans var.")
+                    .foregroundColor(.red)
             } else {
-                Button("📤 Talep Oluştur") {
-                    gosterTalepFormu = true
+                TextField("İsterseniz neden belirtin...", text: $neden)
+                    .textFieldStyle(.roundedBorder)
+
+                Button("📩 Talep Oluştur") {
+                    talepOlustur()
                 }
                 .buttonStyle(.borderedProminent)
+            }
+
+            if talepOlusturuldu {
+                Text("✅ Talebiniz iletildi.")
+                    .foregroundColor(.green)
+            }
+
+            if !hataMesaji.isEmpty {
+                Text(hataMesaji)
+                    .foregroundColor(.red)
             }
         }
         .padding()
         .navigationTitle("Takvim")
+        .onChange(of: secilenTarih) { _ in
+            doluGunKontrol()
+        }
         .onAppear {
-            doluGunleriYukle()
-            ogrenciBilgisiYukle()
-        }
-        .sheet(isPresented: $gosterTalepFormu) {
-            NavigationStack {
-                Form {
-                    Section(header: Text("Talep Tarihi")) {
-                        Text(tarihString(from: secilenTarih))
-                    }
-
-                    Section(header: Text("Açıklama (isteğe bağlı)")) {
-                        TextField("Not ekleyebilirsiniz...", text: $neden)
-                    }
-
-                    Button("Talebi Gönder") {
-                        talepOlustur()
-                    }
-                }
-                .navigationTitle("Seans Talebi")
-            }
+            doluGunKontrol()
         }
     }
 
-    private func tarihString(from date: Date) -> String {
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
-        return df.string(from: date)
-    }
-
-    private func doluGunMu(tarih: Date) -> Bool {
-        let t = tarihString(from: tarih)
-        return doluTarihler.contains(t)
-    }
-
-    private func doluGunleriYukle() {
+    private func doluGunKontrol() {
         let db = Firestore.firestore()
-        db.collection("seanslar").getDocuments { snap, err in
-            guard let docs = snap?.documents else { return }
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let secilenGunStr = formatter.string(from: secilenTarih)
 
-            self.doluTarihler = docs.compactMap { doc in
-                doc.data()["tarih"] as? String
-            }
-        }
-    }
-
-    private func ogrenciBilgisiYukle() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-        let db = Firestore.firestore()
-
-        db.collection("veliler").document(uid).getDocument { doc, error in
-            guard let data = doc?.data(),
-                  let ogrID = data["ogrenci_id"] as? String else { return }
-
-            self.ogrenciID = ogrID
-
-            db.collection("ogrenciler").document(ogrID).getDocument { ogrDoc, err in
-                if let ogrData = ogrDoc?.data() {
-                    self.ogrenciIsmi = ogrData["isim"] as? String ?? "-"
+        db.collection("seanslar")
+            .whereField("tarih", isEqualTo: secilenGunStr)
+            .getDocuments { snapshot, error in
+                if let docs = snapshot?.documents, !docs.isEmpty {
+                    doluGun = true
+                } else {
+                    doluGun = false
                 }
             }
-        }
     }
 
     private func talepOlustur() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
+
         let db = Firestore.firestore()
-        let tarih = tarihString(from: secilenTarih)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let tarihStr = formatter.string(from: secilenTarih)
 
-        let talep: [String: Any] = [
-            "veli_id": uid,
-            "ogrenci_id": ogrenciID,
-            "ogrenci_ismi": ogrenciIsmi,
-            "tarih": tarih,
-            "neden": neden
-        ]
+        // Veli üzerinden öğrenci_id çek
+        db.collection("veliler").document(uid).getDocument { snap, error in
+            guard let data = snap?.data(),
+                  let ogrenciID = data["ogrenci_id"] as? String,
+                  let ogrenciIsmi = data["ogrenci_ismi"] as? String else {
+                self.hataMesaji = "Öğrenci bilgisi alınamadı."
+                return
+            }
 
-        db.collection("seans_talepleri").addDocument(data: talep) { error in
-            if error == nil {
-                gosterTalepFormu = false
-                neden = ""
+            let talep: [String: Any] = [
+                "tarih": tarihStr,
+                "ogrenci_id": ogrenciID,
+                "ogrenci_ismi": ogrenciIsmi,
+                "neden": self.neden
+            ]
+
+            db.collection("seans_talepleri").addDocument(data: talep) { error in
+                if error == nil {
+                    self.talepOlusturuldu = true
+                    self.neden = ""
+                } else {
+                    self.hataMesaji = "Talep oluşturulamadı."
+                }
             }
         }
     }

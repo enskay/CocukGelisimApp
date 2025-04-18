@@ -61,7 +61,7 @@ struct AdminTaleplerView: View {
             }
         }
     }
-//ggg
+
     private func seansaCevir(talep: SeansTalebi) {
         let db = Firestore.firestore()
 

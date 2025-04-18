@@ -29,6 +29,7 @@ class AdminMainViewModel: ObservableObject {
 
             self.todaySessions = docs.compactMap { doc in
                 let data = doc.data()
+
                 return Seans(
                     id: doc.documentID,
                     ogrenciIsmi: data["ogrenci_ismi"] as? String ?? "-",
@@ -42,7 +43,6 @@ class AdminMainViewModel: ObservableObject {
                 )
             }
         }
-
         db.collection("veliler").whereField("talep_yenileme", isEqualTo: true).getDocuments { snapshot, error in
             guard let docs = snapshot?.documents else { return }
 
