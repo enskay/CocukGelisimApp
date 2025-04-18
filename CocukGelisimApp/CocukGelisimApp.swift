@@ -6,23 +6,24 @@ struct CocukGelisimApp: App {
     @StateObject private var loginVM = LoginViewModel()
 
     init() {
-        FirebaseApp.configure() // ✅ Firebase burada başlatılıyor
+        FirebaseApp.configure()
     }
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                if loginVM.isLoggedIn {
+            if loginVM.isLoggedIn {
+                NavigationStack {
                     if loginVM.isTeacher {
                         AdminMainView()
                     } else {
                         VeliTabView()
                     }
-                } else {
-                    LoginView()
                 }
+                .environmentObject(loginVM)
+            } else {
+                LoginView()
+                    .environmentObject(loginVM)
             }
-            .environmentObject(loginVM)
         }
     }
 }

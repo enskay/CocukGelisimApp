@@ -3,36 +3,40 @@ import FirebaseAuth
 import FirebaseFirestore
 
 class LoginViewModel: ObservableObject {
-    
-    @Published var email = ""
-    @Published var password = ""
-    @Published var loginStatusMessage = ""
     @Published var isLoggedIn = false
     @Published var isTeacher = false
+    @Published var email: String = ""
+    @Published var password: String = ""
+    @Published var hataMesaji: String = ""
 
-    func login() {
+    func signIn() {
         Auth.auth().signIn(withEmail: email, password: password) { result, error in
             if let error = error {
                 DispatchQueue.main.async {
-                    self.loginStatusMessage = "Hata: \(error.localizedDescription)"
-                    self.isLoggedIn = false
+                    self.hataMesaji = "Giriş hatası: \(error.localizedDescription)"
                 }
                 return
             }
 
             guard let uid = result?.user.uid else { return }
-            self.checkUserRole(uid: uid)
-            print("Kontrol edilen UID: \(uid)")
+            self.isLoggedIn = true
+
+            let db = Firestore.firestore()
+            db.collection("ogretmenler").document(uid).getDocument { snapshot, _ in
+                self.isTeacher = snapshot?.exists == true
+            }
         }
     }
 
-    private func checkUserRole(uid: String) {
-        let db = Firestore.firestore()
-        db.collection("ogretmenler").document(uid).getDocument { snapshot, error in
-            DispatchQueue.main.async {
-                self.isTeacher = snapshot?.exists == true
-                self.isLoggedIn = true
-            }
+    func signOut() {
+        do {
+            try Auth.auth().signOut()
+            self.isLoggedIn = false
+            self.isTeacher = false
+            self.email = ""
+            self.password = ""
+        } catch {
+            print("Çıkış hatası: \(error)")
         }
     }
 }

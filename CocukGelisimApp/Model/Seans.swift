@@ -10,6 +10,7 @@ struct Seans: Identifiable {
     let onaylandi: Bool
     let neden: String?
     let ogrenciID: String
+    let ogretmenID: String
 
     // 🔁 Manuel initializer (ogrenciID en sonda!)
     init(
@@ -21,7 +22,8 @@ struct Seans: Identifiable {
         durum: String,
         onaylandi: Bool,
         neden: String? = nil,
-        ogrenciID: String
+        ogrenciID: String,
+        ogretmenID: String
     ) {
         self.id = id
         self.ogrenciIsmi = ogrenciIsmi
@@ -32,5 +34,6 @@ struct Seans: Identifiable {
         self.onaylandi = onaylandi
         self.neden = neden
         self.ogrenciID = ogrenciID
+        self.ogretmenID = ogretmenID
     }
 }

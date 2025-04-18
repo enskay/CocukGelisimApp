@@ -1,9 +1,12 @@
 import SwiftUI
+import FirebaseAuth
 
 struct AdminMainView: View {
-
     @StateObject private var viewModel = AdminMainViewModel()
+    @EnvironmentObject var loginVM: LoginViewModel
+
     @State private var seansEkleAktif = false
+    @State private var cikisAlert = false
 
     var body: some View {
         NavigationStack {
@@ -21,10 +24,13 @@ struct AdminMainView: View {
                     }
                 }
 
+                Text("👤 Kullanıcı: \(Auth.auth().currentUser?.email ?? "-")")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+
                 Text("👋 Merhaba, \(viewModel.teacherName)")
                     .font(.headline)
 
-                // Seansları Gör Linki
                 NavigationLink("📖 Seansları Gör", destination: AdminSeansListView())
                     .padding(.top, 5)
 
@@ -72,6 +78,23 @@ struct AdminMainView: View {
                 }
 
                 Spacer()
+
+                HStack {
+                    Spacer()
+                    Button(role: .destructive) {
+                        cikisAlert = true
+                    } label: {
+                        Label("🚪 Çıkış Yap", systemImage: "rectangle.portrait.and.arrow.right")
+                            .font(.body)
+                    }
+                    .alert("Çıkmak istediğinize emin misiniz?", isPresented: $cikisAlert) {
+                        Button("İptal", role: .cancel) {}
+                        Button("Çıkış Yap", role: .destructive) {
+                            loginVM.signOut()
+                        }
+                    }
+                }
+                .padding(.bottom, 12)
             }
             .padding()
             .onAppear {

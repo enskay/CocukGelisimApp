@@ -1,74 +1,69 @@
 import SwiftUI
+import FirebaseAuth
 
 struct LoginView: View {
-    
-    // 🔥 Mutlaka @StateObject olmalı!
-    @StateObject private var loginVM = LoginViewModel()
+    @EnvironmentObject var loginVM: LoginViewModel
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 16) {
+        ZStack {
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
+
+            VStack(spacing: 24) {
                 Spacer()
 
-                Image(systemName: "graduationcap.circle.fill")
+                Image(systemName: "person.crop.circle.badge.checkmark")
                     .resizable()
+                    .frame(width: 100, height: 100)
                     .foregroundColor(.blue.opacity(0.8))
-                    .frame(width: 120, height: 120)
-                    .padding(.bottom, 30)
 
-                Text("Çocuk Gelişim Merkezi")
+                Text("Çocuk Gelişim Giriş")
                     .font(.title)
-                    .fontWeight(.bold)
+                    .bold()
 
-                Text("Hesabınızla giriş yapın")
-                    .foregroundColor(.gray)
-
-                VStack(spacing: 14) {
+                VStack(spacing: 16) {
                     TextField("E-posta", text: $loginVM.email)
-                        .autocapitalization(.none)
                         .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
                         .padding()
-                        .background(Color(.systemGray6))
+                        .background(Color.white)
                         .cornerRadius(10)
+                        .shadow(radius: 1)
 
                     SecureField("Şifre", text: $loginVM.password)
                         .padding()
-                        .background(Color(.systemGray6))
+                        .background(Color.white)
+                        .cornerRadius(10)
+                        .shadow(radius: 1)
+                }
+                .padding(.horizontal)
+
+                Button(action: {
+                    loginVM.signIn()
+                }) {
+                    Text("Giriş Yap")
+                        .foregroundColor(.white)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
                         .cornerRadius(10)
                 }
+                .padding(.horizontal)
 
-                Button("Giriş Yap") {
-                    loginVM.login()
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-
-                if !loginVM.loginStatusMessage.isEmpty {
-                    Text(loginVM.loginStatusMessage)
+                if !loginVM.hataMesaji.isEmpty {
+                    Text(loginVM.hataMesaji)
                         .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
 
                 Spacer()
-
-                // ✅ Gizli NavigationLink ile yönlendirme
-                    .navigationDestination(isPresented: $loginVM.isLoggedIn) {
-                        destinationView
-                    }
+                Text("© 2025 Çocuk Gelişim Uygulaması")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
             }
             .padding()
-        }
-    }
-
-    // ✅ ViewBuilder ile yönlendirme ekranı
-    @ViewBuilder
-    private var destinationView: some View {
-        if loginVM.isTeacher {
-            AdminMainView()
-        } else {
-            VeliDashboardView()
         }
     }
 }
