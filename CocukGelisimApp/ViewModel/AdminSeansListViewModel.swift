@@ -2,38 +2,40 @@ import Foundation
 import FirebaseFirestore
 
 class AdminSeansListViewModel: ObservableObject {
-    let db = Firestore.firestore()
+    @Published var seanslar: [Seans] = []
+    private let db = Firestore.firestore()
 
-    func seansDurumuGuncelle(seansID: String, yeniDurum: String, ogrenciID: String) {
-        // 1. Seansı güncelle
-        db.collection("seanslar").document(seansID).updateData([
-            "durum": yeniDurum
-        ]) { error in
-            guard error == nil else { return }
+    func seanslariYukle() {
+        db.collection("seanslar").getDocuments { snapshot, error in
+            guard let docs = snapshot?.documents else { return }
 
-            // 2. Öğrenci belgesini güncelle
-            let ref = self.db.collection("ogrenciler").document(ogrenciID)
-            ref.getDocument { doc, err in
-                guard let data = doc?.data(),
-                      var kullanilan = data["kullanilan_hak"] as? Int,
-                      var kalanErteleme = data["kalan_erteleme"] as? Int else { return }
-
-                switch yeniDurum {
-                case "katıldı":
-                    kullanilan += 1
-                    ref.updateData(["kullanilan_hak": kullanilan])
-                case "ertelendi":
-                    if kalanErteleme > 0 {
-                        kalanErteleme -= 1
-                        ref.updateData(["kalan_erteleme": kalanErteleme])
-                    }
-                case "gelmedi":
-                    kullanilan += 1
-                    ref.updateData(["kullanilan_hak": kullanilan])
-                default:
-                    break
+            DispatchQueue.main.async {
+                self.seanslar = docs.map { doc in
+                    let d = doc.data()
+                    return Seans(
+                        id: doc.documentID,
+                        ogrenciIsmi: d["ogrenci_ismi"] as? String ?? "-",
+                        tarih: d["tarih"] as? String ?? "-",
+                        saat: d["saat"] as? String ?? "--:--",
+                        tur: d["tur"] as? String ?? "-",
+                        durum: d["durum"] as? String ?? "bekliyor",
+                        onaylandi: d["onaylandi"] as? Bool ?? false,
+                        neden: d["neden"] as? String,
+                        ogrenciID: d["ogrenci_id"] as? String ?? "",
+                        ogretmenID: d["ogretmen_id"] as? String ?? ""
+                    )
                 }
             }
         }
-    }//f
+    }
+
+    func seansDurumuGuncelle(seansID: String, yeniDurum: String, ogrenciID: String) {
+        db.collection("seanslar").document(seansID).updateData([
+            "durum": yeniDurum
+        ])
+    }
+
+    func seansiSil(seansID: String) {
+        db.collection("seanslar").document(seansID).delete()
+    }
 }

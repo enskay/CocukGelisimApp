@@ -1,6 +1,6 @@
 import SwiftUI
-import FirebaseFirestore
 import FirebaseAuth
+import FirebaseFirestore
 
 struct VeliSeanslarimView: View {
     @State private var seanslar: [Seans] = []
@@ -10,12 +10,12 @@ struct VeliSeanslarimView: View {
             List(seanslar) { seans in
                 NavigationLink(destination: VeliSeansDetayView(seans: seans)) {
                     VStack(alignment: .leading) {
-                        Text("📅 Tarih: \(seans.tarih)")
-                        Text("🕒 Saat: \(seans.saat)")
+                        Text("📅 \(seans.tarih)  ⏰ \(seans.saat)")
                         Text("👥 Tür: \(seans.tur)")
+                            .font(.subheadline)
                         Text("📌 Durum: \(seans.durum.capitalized)")
+                            .font(.caption)
                     }
-                    .padding(.vertical, 6)
                 }
             }
             .navigationTitle("Seanslarım")
@@ -29,8 +29,8 @@ struct VeliSeanslarimView: View {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let db = Firestore.firestore()
 
-        db.collection("veliler").document(uid).getDocument { veliDoc, error in
-            guard let data = veliDoc?.data(),
+        db.collection("veliler").document(uid).getDocument { snapshot, error in
+            guard let data = snapshot?.data(),
                   let ogrenciID = data["ogrenci_id"] as? String else { return }
 
             db.collection("seanslar")
@@ -38,7 +38,7 @@ struct VeliSeanslarimView: View {
                 .getDocuments { snapshot, error in
                     guard let docs = snapshot?.documents else { return }
 
-                    self.seanslar = docs.compactMap { doc in
+                    self.seanslar = docs.map { doc in
                         let d = doc.data()
                         return Seans(
                             id: doc.documentID,
@@ -50,7 +50,7 @@ struct VeliSeanslarimView: View {
                             onaylandi: d["onaylandi"] as? Bool ?? false,
                             neden: d["neden"] as? String,
                             ogrenciID: d["ogrenci_id"] as? String ?? "",
-                            ogretmenID: data["ogretmen_id"] as? String ?? ""
+                            ogretmenID: d["ogretmen_id"] as? String ?? ""
                         )
                     }
                 }

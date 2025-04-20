@@ -1,101 +1,72 @@
 import SwiftUI
-import FirebaseFirestore
 import FirebaseAuth
+import FirebaseFirestore
 
 struct VeliTakvimView: View {
-    @State private var secilenTarih: Date = Date()
-    @State private var doluGun: Bool = false
-    @State private var neden: String = ""
-    @State private var talepOlusturuldu = false
-    @State private var hataMesaji = ""
+    @StateObject private var viewModel = VeliTalepViewModel()
+    @State private var secilenTarih = Date()
+    @State private var neden = ""
+    @State private var ogrenciID = ""
+    @State private var ogrenciIsmi = ""
+    @State private var talepBasarili = false
 
     var body: some View {
         VStack(spacing: 20) {
             DatePicker("Tarih Seç", selection: $secilenTarih, displayedComponents: .date)
                 .datePickerStyle(.graphical)
+                .onChange(of: secilenTarih) { _ in
+                    fetchOgrenciBilgisi()
+                }
 
-            if doluGun {
-                Text("⚠️ Bu tarihte zaten bir seans var.")
+            if viewModel.doluTarihler.contains(tarihStr()) {
+                Text("Bu gün dolu. Talep gönderemezsiniz.")
                     .foregroundColor(.red)
             } else {
-                TextField("İsterseniz neden belirtin...", text: $neden)
+                TextField("İsteğe bağlı: Neden belirtebilirsiniz...", text: $neden)
                     .textFieldStyle(.roundedBorder)
 
-                Button("📩 Talep Oluştur") {
-                    talepOlustur()
+                Button("Seans Talebi Gönder") {
+                    viewModel.talepGonder(
+                        tarih: tarihStr(),
+                        neden: neden,
+                        ogrenciID: ogrenciID,
+                        ogrenciIsmi: ogrenciIsmi
+                    ) { basarili in
+                        talepBasarili = basarili
+                    }
                 }
                 .buttonStyle(.borderedProminent)
             }
 
-            if talepOlusturuldu {
-                Text("✅ Talebiniz iletildi.")
+            if talepBasarili {
+                Text("✅ Talebiniz başarıyla gönderildi.")
                     .foregroundColor(.green)
             }
 
-            if !hataMesaji.isEmpty {
-                Text(hataMesaji)
-                    .foregroundColor(.red)
-            }
+            Spacer()
         }
         .padding()
-        .navigationTitle("Takvim")
-        .onChange(of: secilenTarih) { _ in
-            doluGunKontrol()
-        }
         .onAppear {
-            doluGunKontrol()
+            viewModel.doluGunleriYukle()
+            fetchOgrenciBilgisi()
         }
+        .navigationTitle("Takvim")
     }
 
-    private func doluGunKontrol() {
-        let db = Firestore.firestore()
+    private func tarihStr() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        let secilenGunStr = formatter.string(from: secilenTarih)
-
-        db.collection("seanslar")
-            .whereField("tarih", isEqualTo: secilenGunStr)
-            .getDocuments { snapshot, error in
-                if let docs = snapshot?.documents, !docs.isEmpty {
-                    doluGun = true
-                } else {
-                    doluGun = false
-                }
-            }
+        return formatter.string(from: secilenTarih)
     }
 
-    private func talepOlustur() {
+    private func fetchOgrenciBilgisi() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-
         let db = Firestore.firestore()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let tarihStr = formatter.string(from: secilenTarih)
 
-        // Veli üzerinden öğrenci_id çek
-        db.collection("veliler").document(uid).getDocument { snap, error in
-            guard let data = snap?.data(),
-                  let ogrenciID = data["ogrenci_id"] as? String,
-                  let ogrenciIsmi = data["ogrenci_ismi"] as? String else {
-                self.hataMesaji = "Öğrenci bilgisi alınamadı."
-                return
-            }
-
-            let talep: [String: Any] = [
-                "tarih": tarihStr,
-                "ogrenci_id": ogrenciID,
-                "ogrenci_ismi": ogrenciIsmi,
-                "neden": self.neden
-            ]
-
-            db.collection("seans_talepleri").addDocument(data: talep) { error in
-                if error == nil {
-                    self.talepOlusturuldu = true
-                    self.neden = ""
-                } else {
-                    self.hataMesaji = "Talep oluşturulamadı."
-                }
-            }
+        db.collection("veliler").document(uid).getDocument { doc, _ in
+            let data = doc?.data()
+            self.ogrenciID = data?["ogrenci_id"] as? String ?? ""
+            self.ogrenciIsmi = data?["ogrenci_ismi"] as? String ?? "-"
         }
     }
 }

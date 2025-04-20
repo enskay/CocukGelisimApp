@@ -1,82 +1,49 @@
 import SwiftUI
 import FirebaseFirestore
-import FirebaseAuth
 
 struct VeliSeansDetayView: View {
-    var seans: Seans
-
-    @State private var iptalEdildi = false
-    @State private var kalanErteleme: Int = 0
-    @State private var showAlert = false
-    @State private var alertMesaj = ""
+    let seans: Seans
+    @State private var gosterUyari = false
+    @State private var kalanErteleme = 2
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(spacing: 16) {
+            Text("👶 Öğrenci: \(seans.ogrenciIsmi)")
             Text("📅 Tarih: \(seans.tarih)")
             Text("🕒 Saat: \(seans.saat)")
             Text("👥 Tür: \(seans.tur)")
             Text("📌 Durum: \(seans.durum.capitalized)")
-            if let neden = seans.neden, !neden.isEmpty {
-                Text("📝 Neden: \(neden)")
-                    .foregroundColor(.gray)
-            }
 
-            if seans.durum == "gelmedi" {
-                Text("❌ Bu seansı iptal edemezsiniz.")
-                    .foregroundColor(.red)
-            } else if seans.durum == "iptal edildi" || iptalEdildi {
-                Text("❗️ Seans iptal edildi.")
-                    .foregroundColor(.red)
-            } else {
-                Button("❌ Seansı İptal Et") {
-                    showAlert = true
+            if seans.durum != "gelmedi" {
+                Button("Seansı İptal Et") {
+                    gosterUyari = true
                 }
+                .foregroundColor(.red)
                 .buttonStyle(.borderedProminent)
-                .padding(.top, 16)
-                .alert("İptal Onayı", isPresented: $showAlert) {
+                .alert("İptal etmek istediğinize emin misiniz?\nİptal ederseniz \(kalanErteleme - 1) erteleme hakkınız kalacak.", isPresented: $gosterUyari) {
                     Button("Vazgeç", role: .cancel) {}
                     Button("İptal Et", role: .destructive) {
-                        seansiIptalEt()
+                        iptalEt()
                     }
-                } message: {
-                    Text("İptal etmek istediğinize emin misiniz?\nBu işlemden sonra \(kalanErteleme - 1) erteleme hakkınız kalacak.")
                 }
+            } else {
+                Text("Bu seans için işlem yapılamaz.")
+                    .foregroundColor(.gray)
+                    .font(.footnote)
             }
 
             Spacer()
         }
         .padding()
         .navigationTitle("Seans Detayı")
-        .onAppear {
-            ertelemeHakkiniGetir()
-        }
     }
 
-    private func ertelemeHakkiniGetir() {
+    private func iptalEt() {
         let db = Firestore.firestore()
-        db.collection("ogrenciler").document(seans.ogrenciID).getDocument { snap, error in
-            if let data = snap?.data() {
-                self.kalanErteleme = data["kalan_erteleme"] as? Int ?? 0
-            }
-        }
-    }
-
-    private func seansiIptalEt() {
-        let db = Firestore.firestore()
-
-        // Seans durumunu güncelle
         db.collection("seanslar").document(seans.id).updateData([
-            "durum": "iptal edildi"
-        ]) { error in
-            if error == nil {
-                self.iptalEdildi = true
-
-                // Erteleme hakkını azalt
-                let yeniHak = max(self.kalanErteleme - 1, 0)
-                db.collection("ogrenciler").document(seans.ogrenciID).updateData([
-                    "kalan_erteleme": yeniHak
-                ])
-            }
-        }
+            "durum": "ertelendi",
+            "neden": "Veli tarafından iptal edildi"
+        ])
+        // Kalan hak bilgisi db'de varsa ayrıca güncellenebilir
     }
 }

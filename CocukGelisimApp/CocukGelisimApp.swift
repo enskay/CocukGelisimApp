@@ -14,7 +14,7 @@ struct CocukGelisimApp: App {
             if loginVM.isLoggedIn {
                 NavigationStack {
                     if loginVM.isTeacher {
-                        AdminMainView()
+                        AdminTabView()
                     } else {
                         VeliTabView()
                     }
