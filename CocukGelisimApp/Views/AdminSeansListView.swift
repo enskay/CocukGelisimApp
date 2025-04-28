@@ -1,69 +1,101 @@
 import SwiftUI
+import FirebaseFirestore
 
 struct AdminSeansListView: View {
-    @StateObject private var viewModel = AdminSeansListViewModel()
-    @State private var seciliSeans: Seans?
-    @State private var gosterSilAlert = false
-
-    let ogretmenSecenekleri = ["Tümü", "Alper", "Elif"]
+    @State private var groupedSeanslar: [String: [Seans]] = [:]
+    @State private var sortedTarihListesi: [String] = []
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                Picker("Öğretmen Filtrele", selection: $viewModel.ogretmenFiltre) {
-                    ForEach(ogretmenSecenekleri, id: \.self) { ogretmen in
-                        Text(ogretmen)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .onChange(of: viewModel.ogretmenFiltre) { _ in
-                    viewModel.seanslariYukle()
-                }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                ForEach(sortedTarihListesi, id: \.self) { tarih in
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(formattedDateString(tarih))
+                            .font(.title3)
+                            .bold()
+                            .padding(.leading)
 
-                List(viewModel.seanslar) { seans in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("👶 Öğrenci: \(seans.ogrenciIsmi)")
-                        Text("📅 Tarih: \(seans.tarih)")
-                        Text("🕒 Saat: \(seans.saat)")
-                        Text("👥 Tür: \(seans.tur)")
-                        Text("📌 Durum: \(seans.durum.capitalized)")
-
-                        if let neden = seans.neden, !neden.isEmpty {
-                            Text("📝 Neden: \(neden)")
-                                .foregroundColor(.gray)
+                        ForEach(groupedSeanslar[tarih] ?? []) { seans in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("👶 Öğrenci: \(seans.ogrenciIsmi)")
+                                    .font(.headline)
+                                Text("🕒 Saat: \(seans.saat)")
+                                    .font(.subheadline)
+                                Text("👥 Tür: \(seans.tur)")
+                                    .font(.subheadline)
+                                Text("📌 Durum: \(seans.durum.capitalized)")
+                                    .font(.subheadline)
+                            }
+                            .padding()
+                            .background(
+                                seans.tur.lowercased() == "grup"
+                                ? Color.blue.opacity(0.15)
+                                : Color.green.opacity(0.15)
+                            )
+                            .cornerRadius(12)
+                            .padding(.horizontal)
                         }
-
-                        Button("🗑️ Sil") {
-                            seciliSeans = seans
-                            gosterSilAlert = true
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.red)
-                        .padding(.top, 6)
                     }
-                    .padding(.vertical, 8)
+                    .padding(.bottom, 12)
                 }
             }
-            .navigationTitle("Tüm Seanslar")
-            .onAppear {
-                viewModel.seanslariYukle()
-            }
-            .alert("Seans Silme Seçenekleri", isPresented: $gosterSilAlert, presenting: seciliSeans) { seans in
-                Button("Vazgeç", role: .cancel) {}
-
-                Button("Sadece Seansı Sil", role: .destructive) {
-                    viewModel.sadeceSeansiSil(seansID: seans.id)
-                    viewModel.seanslariYukle()
-                }
-
-                Button("Sil ve Erteleme Hakkını Düşür", role: .destructive) {
-                    viewModel.seansiSilVeErtelemeDusur(seans: seans)
-                    viewModel.seanslariYukle()
-                }
-            } message: { seans in
-                Text("“\(seans.ogrenciIsmi)” öğrencisinin seansı silinecek.\nİsterseniz erteleme hakkını da düşebilirsiniz.")
-            }
+            .padding(.top)
         }
+        .navigationTitle("Tüm Seanslar")
+        .onAppear {
+            seanslariYukle()
+        }
+    }
+
+    private func seanslariYukle() {
+        let db = Firestore.firestore()
+
+        db.collection("seanslar")
+            .order(by: "tarih")
+            .getDocuments { snapshot, error in
+                guard let documents = snapshot?.documents else { return }
+
+                var seansListesi: [Seans] = documents.compactMap { doc in
+                    let d = doc.data()
+                    return Seans(
+                        id: doc.documentID,
+                        ogrenciIsmi: d["ogrenci_ismi"] as? String ?? "-",
+                        tarih: d["tarih"] as? String ?? "-",
+                        saat: d["saat"] as? String ?? "--:--",
+                        tur: d["tur"] as? String ?? "-",
+                        durum: d["durum"] as? String ?? "bekliyor",
+                        onaylandi: d["onaylandi"] as? Bool ?? false,
+                        neden: d["neden"] as? String,
+                        ogrenciID: d["ogrenci_id"] as? String ?? "",
+                        ogretmenID: d["ogretmen_id"] as? String ?? ""
+                    )
+                }
+
+                // 🔥 Tarihe göre grupla
+                var tempGrouped: [String: [Seans]] = [:]
+                for seans in seansListesi {
+                    tempGrouped[seans.tarih, default: []].append(seans)
+                }
+
+                // 🔥 Tarihleri sıralı liste yap
+                let sortedTarih = tempGrouped.keys.sorted()
+
+                DispatchQueue.main.async {
+                    self.groupedSeanslar = tempGrouped
+                    self.sortedTarihListesi = sortedTarih
+                }
+            }
+    }
+
+    private func formattedDateString(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.locale = Locale(identifier: "tr_TR")
+            displayFormatter.dateFormat = "dd MMMM yyyy, EEEE"
+            return displayFormatter.string(from: date)
+        }
+        return dateString
     }
 }

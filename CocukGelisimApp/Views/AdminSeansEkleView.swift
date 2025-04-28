@@ -1,163 +1,118 @@
 import SwiftUI
 import FirebaseFirestore
+import FirebaseAuth
 
 struct AdminSeansEkleView: View {
-    @Environment(\.dismiss) var dismiss
-
+    @State private var secilenOgrenciID = ""
     @State private var secilenTarih = Date()
     @State private var secilenSaat = ""
-    @State private var secilenOgrenciID = ""
-    @State private var secilenOgretmenID = ""
-    @State private var seansTuru = "Birebir"
-    @State private var mevcutSeanslar: [Seans] = []
-    @State private var ogrenciler: [(id: String, isim: String)] = []
-    @State private var ogretmenler: [(id: String, isim: String)] = []
-    @State private var gorsunUyari = false
-
-    let saatler = ["09:00", "10:00", "11:00", "13:00", "14:00", "15:00"]
+    @State private var secilenTur = "Birebir"
+    @State private var ogretmenID = ""
+    @State private var ogrenciler: [Ogrenci] = []
+    @State private var saatler: [String] = []
 
     var body: some View {
-        NavigationStack {
-            Form {
-                DatePicker("Tarih", selection: $secilenTarih, displayedComponents: .date)
-                    .onChange(of: secilenTarih) { _ in
-                        mevcutSeanslariGetir()
-                    }
-
-                Picker("Saat", selection: $secilenSaat) {
-                    ForEach(saatler, id: \.self) { Text($0) }
+        Form {
+            Picker("Öğrenci", selection: $secilenOgrenciID) {
+                ForEach(ogrenciler) { ogrenci in
+                    Text(ogrenci.isim).tag(ogrenci.id)
                 }
-
-                Picker("Seans Türü", selection: $seansTuru) {
-                    Text("Birebir").tag("Birebir")
-                    Text("Grup").tag("Grup")
-                }
-
-                Picker("Öğretmen Seç", selection: $secilenOgretmenID) {
-                    ForEach(ogretmenler, id: \.id) { ogretmen in
-                        Text(ogretmen.isim).tag(ogretmen.id)
-                    }
-                }
-
-                Picker("Öğrenci Seç", selection: $secilenOgrenciID) {
-                    ForEach(ogrenciler, id: \.id) { ogrenci in
-                        Text(ogrenci.isim).tag(ogrenci.id)
-                    }
-                }
-
-                if !mevcutSeanslar.isEmpty {
-                    Section(header: Text("Bu Günkü Mevcut Seanslar")) {
-                        ForEach(mevcutSeanslar) { seans in
-                            Text("\(seans.saat) - \(seans.ogrenciIsmi) (\(seans.tur))")
-                        }
-                    }
-                }
-
-                Button("Seansı Kaydet") {
-                    if seansTuru == "Birebir" && mevcutSeanslar.contains(where: {
-                        $0.saat == secilenSaat && $0.ogretmenID == secilenOgretmenID
-                    }) {
-                        gorsunUyari = true
-                    } else {
-                        seansiKaydet()
-                    }
-                }
-                .alert("Bu saatte bu öğretmen için birebir seans zaten var. Yine de eklemek istiyor musunuz?", isPresented: $gorsunUyari) {
-                    Button("İptal", role: .cancel) {}
-                    Button("Ekle", role: .destructive) {
-                        seansiKaydet()
-                    }
-                }
-
-                Button("⬅️ Geri Dön") {
-                    dismiss()
-                }
-                .foregroundColor(.blue)
             }
-            .navigationTitle("Seans Ekle")
-            .onAppear {
-                ogrencileriYukle()
-                ogretmenleriYukle()
-                mevcutSeanslariGetir()
+
+            DatePicker("Tarih", selection: $secilenTarih, displayedComponents: .date)
+
+            Picker("Saat", selection: $secilenSaat) {
+                ForEach(saatler, id: \.self) { saat in
+                    Text(saat).tag(saat)
+                }
+            }
+
+            Picker("Tür", selection: $secilenTur) {
+                Text("Birebir").tag("Birebir")
+                Text("Grup").tag("Grup")
+            }
+            .pickerStyle(SegmentedPickerStyle())
+
+            Button("Seansı Kaydet") {
+                seansiKaydet()
+            }
+            .disabled(!formGecerliMi())
+        }
+        .navigationTitle("Seans Ekle")
+        .onAppear {
+            ogrencileriYukle()
+            saatler = saatSecenekleriniOlustur()
+            if let first = self.ogrenciler.first {
+                self.secilenOgrenciID = first.id
+            }
+            if let uid = Auth.auth().currentUser?.uid {
+                self.ogretmenID = uid
             }
         }
     }
 
-    private func tarihStr() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: secilenTarih)
+    private func formGecerliMi() -> Bool {
+        return !secilenOgrenciID.isEmpty && !secilenSaat.isEmpty && secilenTarih >= Calendar.current.startOfDay(for: Date())
     }
 
-    private func mevcutSeanslariGetir() {
-        let db = Firestore.firestore()
-        guard !secilenOgretmenID.isEmpty else { return }
-        db.collection("seanslar")
-            .whereField("tarih", isEqualTo: tarihStr())
-            .whereField("ogretmen_id", isEqualTo: secilenOgretmenID)
-            .getDocuments { snapshot, error in
-                guard let docs = snapshot?.documents else { return }
+    private func saatSecenekleriniOlustur() -> [String] {
+        var saatler: [String] = []
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm"
 
-                self.mevcutSeanslar = docs.compactMap { doc in
-                    let d = doc.data()
-                    return Seans(
-                        id: doc.documentID,
-                        ogrenciIsmi: d["ogrenci_ismi"] as? String ?? "-",
-                        tarih: d["tarih"] as? String ?? "-",
-                        saat: d["saat"] as? String ?? "--:--",
-                        tur: d["tur"] as? String ?? "-",
-                        durum: d["durum"] as? String ?? "bekliyor",
-                        onaylandi: d["onaylandi"] as? Bool ?? false,
-                        neden: d["neden"] as? String,
-                        ogrenciID: d["ogrenci_id"] as? String ?? "",
-                        ogretmenID: d["ogretmen_id"] as? String ?? ""
-                    )
-                }
-            }
+        let calendar = Calendar.current
+        var current = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: Date())!
+        let end = calendar.date(bySettingHour: 19, minute: 0, second: 0, of: Date())!
+
+        while current <= end {
+            saatler.append(dateFormatter.string(from: current))
+            current = calendar.date(byAdding: .minute, value: 15, to: current)!
+        }
+
+        return saatler
     }
 
     private func ogrencileriYukle() {
         let db = Firestore.firestore()
         db.collection("ogrenciler").getDocuments { snapshot, error in
             guard let docs = snapshot?.documents else { return }
+
             self.ogrenciler = docs.map { doc in
                 let data = doc.data()
-                let isim = data["isim"] as? String ?? "-"
-                return (doc.documentID, isim)
-            }
-            if let first = self.ogrenciler.first {
-                self.secilenOgrenciID = first.id
-            }
-        }
-    }
-
-    private func ogretmenleriYukle() {
-        let db = Firestore.firestore()
-        db.collection("ogretmenler").getDocuments { snapshot, error in
-            guard let docs = snapshot?.documents else { return }
-            self.ogretmenler = docs.map { doc in
-                let data = doc.data()
-                let isim = data["isim"] as? String ?? "-"
-                return (doc.documentID, isim)
-            }
-            if let first = self.ogretmenler.first {
-                self.secilenOgretmenID = first.id
+                return Ogrenci(
+                    id: doc.documentID,
+                    isim: data["isim"] as? String ?? "-"
+                )
             }
         }
     }
 
     private func seansiKaydet() {
         let db = Firestore.firestore()
-        db.collection("seanslar").addDocument(data: [
-            "tarih": tarihStr(),
-            "saat": secilenSaat,
+
+        let secilenOgrenci = ogrenciler.first { $0.id == secilenOgrenciID }
+        let seansData: [String: Any] = [
             "ogrenci_id": secilenOgrenciID,
-            "ogrenci_ismi": ogrenciler.first(where: { $0.id == secilenOgrenciID })?.isim ?? "-",
-            "tur": seansTuru,
+            "ogrenci_ismi": secilenOgrenci?.isim ?? "-",
+            "tarih": formattedTarih(date: secilenTarih),
+            "saat": secilenSaat,
+            "tur": secilenTur,
             "durum": "bekliyor",
             "onaylandi": true,
-            "ogretmen_id": secilenOgretmenID
-        ])
-        dismiss()
+            "ogretmen_id": ogretmenID
+        ]
+
+        db.collection("seanslar").addDocument(data: seansData)
     }
+
+    private func formattedTarih(date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+}
+
+struct Ogrenci: Identifiable {
+    let id: String
+    let isim: String
 }

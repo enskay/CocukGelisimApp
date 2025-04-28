@@ -12,7 +12,6 @@ struct AdminOgrencilerView: View {
                         Text("👶 Öğrenci: \(ogrenci.ogrenciIsmi)")
                         Text("🎂 Yaş: \(ogrenci.yas)")
                         Text("👩‍👧‍👦 Veli: \(ogrenci.veliIsmi)")
-                        Text("📧 E-posta: \(ogrenci.email)")
                     }
                     .padding(.vertical, 4)
                 }
@@ -37,7 +36,6 @@ struct AdminOgrencilerView: View {
                 let veliData = doc.data()
                 let ogrenciID = veliData["ogrenci_id"] as? String ?? ""
                 let veliIsmi = veliData["veliAdi"] as? String ?? "-"
-                let email = veliData["email"] as? String ?? "-"
 
                 group.enter()
 
@@ -52,7 +50,7 @@ struct AdminOgrencilerView: View {
                         id: doc.documentID,
                         ogrenciID: ogrenciID,
                         veliIsmi: veliIsmi,
-                        email: email,
+                        email: "-", // Mail verimiz yok o yüzden boş "-"
                         ogrenciIsmi: ogrenciIsmi,
                         yas: yas
                     )

@@ -3,29 +3,42 @@ import FirebaseAuth
 
 struct AdminTabView: View {
     @EnvironmentObject var loginVM: LoginViewModel
+    @State private var selectedTab = 0
     @State private var cikisAlert = false
 
     var body: some View {
-        TabView {
-            AdminMainView()
-                .tabItem {
-                    Label("Ana Sayfa", systemImage: "house")
-                }
+        TabView(selection: $selectedTab) {
+            NavigationStack {
+                AdminMainView()
+            }
+            .tabItem {
+                Label("Ana Sayfa", systemImage: "house")
+            }
+            .tag(0)
 
-            AdminTaleplerView()
-                .tabItem {
-                    Label("Talepler", systemImage: "tray.and.arrow.down")
-                }
+            NavigationStack {
+                AdminTaleplerView()
+            }
+            .tabItem {
+                Label("Talepler", systemImage: "tray.and.arrow.down")
+            }
+            .tag(1)
 
-            AdminSeansListView()
-                .tabItem {
-                    Label("Seanslar", systemImage: "calendar")
-                }
+            NavigationStack {
+                AdminOgrencilerView()
+            }
+            .tabItem {
+                Label("Öğrenciler", systemImage: "person.2.fill")
+            }
+            .tag(2)
 
-            AdminOgrencilerView()
-                .tabItem {
-                    Label("Öğrenciler", systemImage: "person.3.fill")
-                }
+            NavigationStack {
+                AdminTakvimView()
+            }
+            .tabItem {
+                Label("Takvim", systemImage: "calendar")
+            }
+            .tag(3)
 
             VStack {
                 Spacer()
@@ -46,6 +59,7 @@ struct AdminTabView: View {
             .tabItem {
                 Label("Çıkış", systemImage: "rectangle.portrait.and.arrow.right")
             }
+            .tag(4)
         }
     }
 }
