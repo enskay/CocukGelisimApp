@@ -10,7 +10,7 @@ struct AdminOgrencilerView: View {
                 NavigationLink(destination: OgrenciDetayView(ogrenciID: ogrenci.ogrenciID)) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("👶 Öğrenci: \(ogrenci.ogrenciIsmi)")
-                        Text("🎂 Yaş: \(ogrenci.yas)")
+                        Text("🎂 Yaş: \(ogrenci.yas) ay")
                         Text("👩‍👧‍👦 Veli: \(ogrenci.veliIsmi)")
                     }
                     .padding(.vertical, 4)
@@ -44,15 +44,18 @@ struct AdminOgrencilerView: View {
 
                     let ogrData = ogrenciDoc?.data()
                     let ogrenciIsmi = ogrData?["isim"] as? String ?? "-"
-                    let yas = ogrData?["yas"] as? Int ?? 0
+                    
+                    // 🔥 Artık doğum tarihinden ay farkı hesaplıyoruz
+                    let dogumTarihi = (ogrData?["dogumTarihi"] as? Timestamp)?.dateValue() ?? Date()
+                    let yasAy = ayFarkiHesapla(dogumTarihi: dogumTarihi)
 
                     let model = OgrenciVeliBilgisi(
                         id: doc.documentID,
                         ogrenciID: ogrenciID,
                         veliIsmi: veliIsmi,
-                        email: "-", // Mail verimiz yok o yüzden boş "-"
+                        email: "-", // Mail verimiz yok
                         ogrenciIsmi: ogrenciIsmi,
-                        yas: yas
+                        yas: yasAy
                     )
                     tempListe.append(model)
                 }
@@ -62,5 +65,13 @@ struct AdminOgrencilerView: View {
                 self.ogrenciler = tempListe
             }
         }
+    }
+
+    // 🔥 Doğum tarihinden ay farkı hesaplayan fonksiyon
+    private func ayFarkiHesapla(dogumTarihi: Date) -> Int {
+        let now = Date()
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.month], from: dogumTarihi, to: now)
+        return components.month ?? 0
     }
 }

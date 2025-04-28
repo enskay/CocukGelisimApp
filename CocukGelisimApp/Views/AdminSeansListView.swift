@@ -5,19 +5,23 @@ struct AdminSeansListView: View {
     @State private var groupedSeanslar: [String: [Seans]] = [:]
     @State private var sortedTarihListesi: [String] = []
 
+    // Öğretmen ID -> İsim eşleşmesi
+    let ogretmenIsimleri = [
+        "ZZ3PM4pTkEefhmcm6JB4BXsltgu2": "Alper",
+        "TVLwEsZhJuUUQrUpRSKk1jiufBv2": "Elif"
+    ]
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 ForEach(sortedTarihListesi, id: \.self) { tarih in
                     VStack(alignment: .leading, spacing: 12) {
-                        // 📅 Tarih Başlığı
                         Text(formattedDateString(tarih))
                             .font(.title3)
                             .bold()
                             .padding(.leading, 16)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
-                        // 📋 O tarihe ait seanslar
                         ForEach(groupedSeanslar[tarih] ?? []) { seans in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("👶 Öğrenci: \(seans.ogrenciIsmi)")
@@ -28,6 +32,9 @@ struct AdminSeansListView: View {
                                     .font(.subheadline)
                                 Text("📌 Durum: \(seans.durum.capitalized)")
                                     .font(.subheadline)
+                                Text("👨‍🏫 Öğretmen: \(ogretmenIsimleri[seans.ogretmenID] ?? "Bilinmiyor")")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
                             }
                             .padding()
                             .background(
