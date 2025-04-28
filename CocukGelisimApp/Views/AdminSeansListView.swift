@@ -7,16 +7,19 @@ struct AdminSeansListView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 ForEach(sortedTarihListesi, id: \.self) { tarih in
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // 📅 Tarih Başlığı
                         Text(formattedDateString(tarih))
                             .font(.title3)
                             .bold()
-                            .padding(.leading)
+                            .padding(.leading, 16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
+                        // 📋 O tarihe ait seanslar
                         ForEach(groupedSeanslar[tarih] ?? []) { seans in
-                            VStack(alignment: .leading, spacing: 6) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 Text("👶 Öğrenci: \(seans.ogrenciIsmi)")
                                     .font(.headline)
                                 Text("🕒 Saat: \(seans.saat)")
@@ -29,17 +32,16 @@ struct AdminSeansListView: View {
                             .padding()
                             .background(
                                 seans.tur.lowercased() == "grup"
-                                ? Color.blue.opacity(0.15)
-                                : Color.green.opacity(0.15)
+                                ? Color.blue.opacity(0.2)
+                                : Color.green.opacity(0.2)
                             )
-                            .cornerRadius(12)
-                            .padding(.horizontal)
+                            .cornerRadius(14)
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.bottom, 12)
                 }
             }
-            .padding(.top)
+            .padding(.vertical)
         }
         .navigationTitle("Tüm Seanslar")
         .onAppear {
@@ -71,13 +73,11 @@ struct AdminSeansListView: View {
                     )
                 }
 
-                // 🔥 Tarihe göre grupla
                 var tempGrouped: [String: [Seans]] = [:]
                 for seans in seansListesi {
                     tempGrouped[seans.tarih, default: []].append(seans)
                 }
 
-                // 🔥 Tarihleri sıralı liste yap
                 let sortedTarih = tempGrouped.keys.sorted()
 
                 DispatchQueue.main.async {
