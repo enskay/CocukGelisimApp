@@ -3,23 +3,39 @@ import FirebaseFirestore
 
 struct AdminOgrencilerView: View {
     @State private var ogrenciler: [OgrenciVeliBilgisi] = []
+    @State private var loading = true
 
     var body: some View {
-        NavigationStack {
-            List(ogrenciler) { ogrenci in
-                NavigationLink(destination: OgrenciDetayView(ogrenciID: ogrenci.ogrenciID)) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("👶 Öğrenci: \(ogrenci.ogrenciIsmi)")
-                        Text("🎂 Yaş: \(ogrenci.yas) ay")
-                        Text("👩‍👧‍👦 Veli: \(ogrenci.veliIsmi)")
+        VStack {
+            if loading {
+                ProgressView("Yükleniyor...")
+                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                    .scaleEffect(1.5)
+            } else {
+                List(ogrenciler) { ogrenci in
+                    NavigationLink(destination: OgrenciDetayView(ogrenciID: ogrenci.ogrenciID)) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("👶 Öğrenci: \(ogrenci.ogrenciIsmi)")
+                                .font(.headline)
+                            Text("🎂 Yaş: \(ogrenci.yas) Ay")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Text("👩‍👧‍👦 Veli: \(ogrenci.veliIsmi)")
+                                .font(.subheadline)
+                        }
+                        .padding()
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 4)
                     }
-                    .padding(.vertical, 4)
                 }
+                .listStyle(.plain)
+                .background(Color(.systemGroupedBackground))
             }
-            .navigationTitle("Öğrenciler")
-            .onAppear {
-                ogrencileriYukle()
-            }
+        }
+        .navigationTitle("Öğrenciler")
+        .onAppear {
+            ogrencileriYukle()
         }
     }
 
@@ -44,8 +60,6 @@ struct AdminOgrencilerView: View {
 
                     let ogrData = ogrenciDoc?.data()
                     let ogrenciIsmi = ogrData?["isim"] as? String ?? "-"
-                    
-                    // 🔥 Artık doğum tarihinden ay farkı hesaplıyoruz
                     let dogumTarihi = (ogrData?["dogumTarihi"] as? Timestamp)?.dateValue() ?? Date()
                     let yasAy = ayFarkiHesapla(dogumTarihi: dogumTarihi)
 
@@ -53,7 +67,7 @@ struct AdminOgrencilerView: View {
                         id: doc.documentID,
                         ogrenciID: ogrenciID,
                         veliIsmi: veliIsmi,
-                        email: "-", // Mail verimiz yok
+                        email: "-", // Şu an mail verimiz yok
                         ogrenciIsmi: ogrenciIsmi,
                         yas: yasAy
                     )
@@ -63,11 +77,11 @@ struct AdminOgrencilerView: View {
 
             group.notify(queue: .main) {
                 self.ogrenciler = tempListe
+                self.loading = false
             }
         }
     }
 
-    // 🔥 Doğum tarihinden ay farkı hesaplayan fonksiyon
     private func ayFarkiHesapla(dogumTarihi: Date) -> Int {
         let now = Date()
         let calendar = Calendar.current

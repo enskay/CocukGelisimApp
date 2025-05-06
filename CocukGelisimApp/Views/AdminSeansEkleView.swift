@@ -35,8 +35,10 @@ struct AdminSeansEkleView: View {
 
             Button("Seansı Kaydet") {
                 seansiKaydet()
+                
             }
             .disabled(!formGecerliMi())
+            
         }
         .navigationTitle("Seans Ekle")
         .onAppear {

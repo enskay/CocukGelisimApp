@@ -4,51 +4,57 @@ import FirebaseFirestore
 struct AdminSeansListView: View {
     @State private var groupedSeanslar: [String: [Seans]] = [:]
     @State private var sortedTarihListesi: [String] = []
+    @State private var loading = true
 
-    // Öğretmen ID -> İsim eşleşmesi
     let ogretmenIsimleri = [
         "ZZ3PM4pTkEefhmcm6JB4BXsltgu2": "Alper",
         "TVLwEsZhJuUUQrUpRSKk1jiufBv2": "Elif"
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                ForEach(sortedTarihListesi, id: \.self) { tarih in
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(formattedDateString(tarih))
-                            .font(.title3)
-                            .bold()
-                            .padding(.leading, 16)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+        VStack {
+            if loading {
+                ProgressView("Yükleniyor...")
+                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                    .scaleEffect(1.5)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        ForEach(sortedTarihListesi, id: \.self) { tarih in
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text(formattedDateString(tarih))
+                                    .font(.title3)
+                                    .bold()
+                                    .padding(.leading, 16)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                        ForEach(groupedSeanslar[tarih] ?? []) { seans in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("👶 Öğrenci: \(seans.ogrenciIsmi)")
-                                    .font(.headline)
-                                Text("🕒 Saat: \(seans.saat)")
-                                    .font(.subheadline)
-                                Text("👥 Tür: \(seans.tur)")
-                                    .font(.subheadline)
-                                Text("📌 Durum: \(seans.durum.capitalized)")
-                                    .font(.subheadline)
-                                Text("👨‍🏫 Öğretmen: \(ogretmenIsimleri[seans.ogretmenID] ?? "Bilinmiyor")")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                ForEach(groupedSeanslar[tarih] ?? []) { seans in
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("👶 Öğrenci: \(seans.ogrenciIsmi)")
+                                            .font(.headline)
+                                        Text("🕒 Saat: \(seans.saat)")
+                                        Text("👥 Tür: \(seans.tur)")
+                                        Text("📌 Durum: \(seans.durum.capitalized)")
+                                        Text("👨‍🏫 Öğretmen: \(ogretmenIsimleri[seans.ogretmenID] ?? "Bilinmiyor")")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding()
+                                    .background(
+                                        seans.tur.lowercased() == "grup"
+                                        ? Color.blue.opacity(0.15)
+                                        : Color.green.opacity(0.15)
+                                    )
+                                    .cornerRadius(12)
+                                    .shadow(radius: 3)
+                                    .padding(.horizontal, 16)
+                                    .transition(.move(edge: .trailing))
+                                }
                             }
-                            .padding()
-                            .background(
-                                seans.tur.lowercased() == "grup"
-                                ? Color.blue.opacity(0.2)
-                                : Color.green.opacity(0.2)
-                            )
-                            .cornerRadius(14)
-                            .padding(.horizontal, 16)
                         }
                     }
+                    .padding(.vertical)
                 }
             }
-            .padding(.vertical)
         }
         .navigationTitle("Tüm Seanslar")
         .onAppear {
@@ -58,7 +64,6 @@ struct AdminSeansListView: View {
 
     private func seanslariYukle() {
         let db = Firestore.firestore()
-
         db.collection("seanslar")
             .order(by: "tarih")
             .getDocuments { snapshot, error in
@@ -90,6 +95,7 @@ struct AdminSeansListView: View {
                 DispatchQueue.main.async {
                     self.groupedSeanslar = tempGrouped
                     self.sortedTarihListesi = sortedTarih
+                    self.loading = false
                 }
             }
     }
