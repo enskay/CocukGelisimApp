@@ -22,6 +22,9 @@ struct AdminOgrencilerView: View {
                                 .foregroundColor(.secondary)
                             Text("👩‍👧‍👦 Veli: \(ogrenci.veliIsmi)")
                                 .font(.subheadline)
+                            Text("🔐 Kod: \(ogrenci.girisKodu)")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
                         }
                         .padding()
                         .background(Color.white)
@@ -45,16 +48,15 @@ struct AdminOgrencilerView: View {
             guard let docs = snap?.documents else { return }
 
             var tempListe: [OgrenciVeliBilgisi] = []
-
             let group = DispatchGroup()
 
             for doc in docs {
                 let veliData = doc.data()
                 let ogrenciID = veliData["ogrenci_id"] as? String ?? ""
                 let veliIsmi = veliData["veliAdi"] as? String ?? "-"
+                let girisKodu = veliData["giris_kodu"] as? String ?? "Kod Yok"
 
                 group.enter()
-
                 db.collection("ogrenciler").document(ogrenciID).getDocument { ogrenciDoc, _ in
                     defer { group.leave() }
 
@@ -65,11 +67,11 @@ struct AdminOgrencilerView: View {
 
                     let model = OgrenciVeliBilgisi(
                         id: doc.documentID,
-                        ogrenciID: ogrenciID,
-                        veliIsmi: veliIsmi,
-                        email: "-", // Şu an mail verimiz yok
-                        ogrenciIsmi: ogrenciIsmi,
-                        yas: yasAy
+                           ogrenciID: ogrenciID,
+                           veliIsmi: veliIsmi,
+                           girisKodu: girisKodu,
+                           ogrenciIsmi: ogrenciIsmi,
+                           yas: yasAy
                     )
                     tempListe.append(model)
                 }
