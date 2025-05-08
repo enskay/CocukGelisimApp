@@ -1,169 +1,156 @@
 import SwiftUI
-import FirebaseAuth
 import FirebaseFirestore
+import FirebaseAuth
 
 struct VeliSeanslarimView: View {
     @State private var grupSeanslar: [String: [Seans]] = [:]
     @State private var birebirSeanslar: [String: [Seans]] = [:]
-    @State private var kalanErteleme: Int = 0
+    @State private var tarihListesi: [String] = []
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("🎯 Kalan Grup Seans Erteleme Hakkı: \(kalanErteleme)")
-                    .bold()
+                if !grupSeanslar.isEmpty {
+                    Text("👥 Grup Seansları")
+                        .font(.title2.bold())
+                        .padding(.horizontal)
 
-                Text("👥 Grup Seansları").font(.title3).bold()
-                ForEach(grupSeanslar.keys.sorted(), id: \.self) { tarih in
-                    Text("📅 \(tarih)").font(.headline)
-                    ForEach(grupSeanslar[tarih] ?? []) { seans in
-                        seansCard(seans)
+                    ForEach(tarihListesi, id: \.self) { tarih in
+                        if let seanslar = grupSeanslar[tarih], !seanslar.isEmpty {
+                            Text(tarih)
+                                .font(.headline)
+                                .padding(.leading)
+
+                            ForEach(seanslar) { seans in
+                                seansKart(seans: seans)
+                            }
+                        }
                     }
                 }
 
-                Text("🤝 Birebir Seanslar").font(.title3).bold()
-                ForEach(birebirSeanslar.keys.sorted(), id: \.self) { tarih in
-                    Text("📅 \(tarih)").font(.headline)
-                    ForEach(birebirSeanslar[tarih] ?? []) { seans in
-                        seansCard(seans)
+                if !birebirSeanslar.isEmpty {
+                    Text("🧑‍🤝‍🧑 Birebir Seanslar")
+                        .font(.title2.bold())
+                        .padding(.horizontal)
+
+                    ForEach(tarihListesi, id: \.self) { tarih in
+                        if let seanslar = birebirSeanslar[tarih], !seanslar.isEmpty {
+                            Text(tarih)
+                                .font(.headline)
+                                .padding(.leading)
+
+                            ForEach(seanslar) { seans in
+                                seansKart(seans: seans)
+                            }
+                        }
                     }
+                }
+
+                if grupSeanslar.isEmpty && birebirSeanslar.isEmpty {
+                    Text("Henüz seans bulunmuyor.")
+                        .foregroundColor(.gray)
+                        .padding()
                 }
             }
-            .padding()
+            .padding(.top)
         }
         .navigationTitle("Seanslarım")
         .onAppear {
-            yukle()
+            seanslariYukle()
         }
     }
 
-    @ViewBuilder
-    func seansCard(_ seans: Seans) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+    private func seansKart(seans: Seans) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
             Text("🕒 Saat: \(seans.saat)")
             Text("📌 Durum: \(seans.durum.capitalized)")
-
             if let neden = seans.neden, !neden.isEmpty {
-                Text("📝 Neden: \(neden)").foregroundColor(.gray)
+                Text("📝 Not: \(neden)")
+                    .foregroundColor(.gray)
             }
 
-            if seans.durum != "gelmedi" {
-                Button("❌ Seansı İptal Et") {
-                    if seans.tur == "Grup" {
-                        if kalanErteleme > 0 {
-                            iptalEt(seans: seans)
-                        } else {
-                            // Uyarı: hak kalmadı
-                            print("Erteleme hakkınız kalmadı.")
-                        }
-                    } else {
-                        iptalEt(seans: seans) // Birebir → sınırsız
-                    }
-                }
-                .buttonStyle(.bordered)
+            NavigationLink("Ayrıntılar", destination: VeliSeansDetayView(seans: seans))
+                .font(.caption)
                 .padding(.top, 4)
-            }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(radius: 3)
+        .padding(.horizontal)
     }
 
-    private func iptalEt(seans: Seans) {
-        let db = Firestore.firestore()
-        var yeniErteleme = kalanErteleme
-
-        if seans.tur == "Grup" && kalanErteleme > 0 {
-            yeniErteleme -= 1
+    private func seanslariYukle() {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("🔥 Kullanıcı UID bulunamadı")
+            return
         }
 
-        // Seans güncelle
-        db.collection("seanslar").document(seans.id).updateData([
-            "durum": "iptal"
-        ])
-
-        // Öğrenci güncelle
-        db.collection("ogrenciler").document(seans.ogrenciID).updateData([
-            "kalan_erteleme": yeniErteleme
-        ])
-
-        DispatchQueue.main.async {
-            kalanErteleme = yeniErteleme
-            yukle()
-        }
-    }
-
-    private func yukle() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
         let db = Firestore.firestore()
-
-        db.collection("veliler").document(uid).getDocument { veliDoc, error in
-            guard let data = veliDoc?.data(),
-                  let ogrenciID = data["ogrenci_id"] as? String else { return }
-
-            // Öğrenci erteleme hak
-            db.collection("ogrenciler").document(ogrenciID).getDocument { snap, _ in
-                if let d = snap?.data() {
-                    self.kalanErteleme = d["kalan_erteleme"] as? Int ?? 0
-                }
+        db.collection("veliler").document(uid).getDocument { docSnap, _ in
+            guard let data = docSnap?.data(),
+                  let ogrenciID = data["ogrenci_id"] as? String else {
+                print("🔥 Veli belgesi bulunamadı veya öğrenci_id eksik")
+                return
             }
 
-            // Seansları çek
             db.collection("seanslar")
                 .whereField("ogrenci_id", isEqualTo: ogrenciID)
-                .getDocuments { snapshot, error in
-                    guard let docs = snapshot?.documents else { return }
+                .getDocuments { snap, error in
+                    guard let docs = snap?.documents else {
+                        print("🔥 Seanslar yüklenemedi")
+                        return
+                    }
 
-                    var grupDict: [String: [Seans]] = [:]
-                    var birebirDict: [String: [Seans]] = [:]
-
-                    let formatter = DateFormatter()
-                    formatter.locale = Locale(identifier: "tr_TR")
-                    formatter.dateFormat = "yyyy-MM-dd"
-
-                    let displayFormatter = DateFormatter()
-                    displayFormatter.locale = Locale(identifier: "tr_TR")
-                    displayFormatter.dateFormat = "dd MMMM EEEE"
+                    var grup: [String: [Seans]] = [:]
+                    var birebir: [String: [Seans]] = [:]
+                    var tumTarihler: Set<String> = []
 
                     for doc in docs {
                         let d = doc.data()
-                        var tarihKey = "-"
-                        if let t = d["tarih"] as? String {
-                            tarihKey = t
-                        } else if let t = d["tarih"] as? Timestamp {
-                            tarihKey = formatter.string(from: t.dateValue())
-                        }
-
-                        var displayDate = tarihKey
-                        if let date = formatter.date(from: tarihKey) {
-                            displayDate = displayFormatter.string(from: date)
-                        }
+                        let tarihStr = d["tarih"] as? String ?? "-"
+                        let displayTarih = tarihGosterimi(tarihStr)
 
                         let seans = Seans(
                             id: doc.documentID,
                             ogrenciIsmi: d["ogrenci_ismi"] as? String ?? "-",
-                            tarih: tarihKey,
+                            tarih: tarihStr,
                             saat: d["saat"] as? String ?? "--:--",
                             tur: d["tur"] as? String ?? "-",
                             durum: d["durum"] as? String ?? "bekliyor",
                             onaylandi: d["onaylandi"] as? Bool ?? false,
                             neden: d["neden"] as? String,
-                            ogrenciID: ogrenciID,
+                            ogrenciID: d["ogrenci_id"] as? String ?? "",
                             ogretmenID: d["ogretmen_id"] as? String ?? ""
                         )
 
-                        if seans.tur == "Grup" {
-                            grupDict[displayDate, default: []].append(seans)
+                        tumTarihler.insert(displayTarih)
+
+                        if seans.tur.lowercased() == "grup" {
+                            grup[displayTarih, default: []].append(seans)
                         } else {
-                            birebirDict[displayDate, default: []].append(seans)
+                            birebir[displayTarih, default: []].append(seans)
                         }
                     }
 
-                    DispatchQueue.main.async {
-                        self.grupSeanslar = grupDict
-                        self.birebirSeanslar = birebirDict
-                    }
+                    self.grupSeanslar = grup
+                    self.birebirSeanslar = birebir
+                    self.tarihListesi = tumTarihler.sorted()
                 }
         }
+    }
+
+    private func tarihGosterimi(_ tarihStr: String) -> String {
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "yyyy-MM-dd"
+
+        let displayFormatter = DateFormatter()
+        displayFormatter.locale = Locale(identifier: "tr_TR")
+        displayFormatter.dateFormat = "dd MMMM yyyy, EEEE"
+
+        if let date = inputFormatter.date(from: tarihStr) {
+            return displayFormatter.string(from: date)
+        }
+        return tarihStr
     }
 }

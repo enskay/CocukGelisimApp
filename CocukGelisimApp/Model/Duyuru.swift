@@ -1,7 +1,9 @@
 import Foundation
 
 struct Duyuru: Identifiable {
-    var id: String
-    var baslik: String
-    var icerik: String
+    let id: String
+    let baslik: String
+    let aciklama: String
+    let gorselURL: String
+    let olusturulmaTarihi: String
 }
