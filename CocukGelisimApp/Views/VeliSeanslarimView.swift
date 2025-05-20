@@ -1,8 +1,9 @@
 import SwiftUI
 import FirebaseFirestore
-import FirebaseAuth
 
 struct VeliSeanslarimView: View {
+    @EnvironmentObject var loginVM: LoginViewModel
+
     @State private var grupSeanslar: [String: [Seans]] = [:]
     @State private var birebirSeanslar: [String: [Seans]] = [:]
     @State private var tarihListesi: [String] = []
@@ -63,34 +64,26 @@ struct VeliSeanslarimView: View {
     private func seansKart(seans: Seans) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("🕒 Saat: \(seans.saat)")
-            Text("📌 Durum: \(seans.durum.capitalized)")
-            if let neden = seans.neden, !neden.isEmpty {
-                Text("📝 Not: \(neden)")
-                    .foregroundColor(.gray)
-            }
-
-            NavigationLink("Ayrıntılar", destination: VeliSeansDetayView(seans: seans))
-                .font(.caption)
-                .padding(.top, 4)
+            Text("👩‍🏫 Öğretmen: \(seans.ogretmenID)")
         }
         .padding()
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(radius: 3)
+        .background(Color.orange.opacity(0.15))
+        .cornerRadius(14)
+        .shadow(color: .gray.opacity(0.2), radius: 4, x: 2, y: 2)
         .padding(.horizontal)
     }
 
     private func seanslariYukle() {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            print("🔥 Kullanıcı UID bulunamadı")
+        guard let veliID = loginVM.currentVeliID else {
+            print("🔥 Giriş yapan veli ID'si bulunamadı")
             return
         }
 
         let db = Firestore.firestore()
-        db.collection("veliler").document(uid).getDocument { docSnap, _ in
+        db.collection("veliler").document(veliID).getDocument { docSnap, _ in
             guard let data = docSnap?.data(),
                   let ogrenciID = data["ogrenci_id"] as? String else {
-                print("🔥 Veli belgesi bulunamadı veya öğrenci_id eksik")
+                print("🔥 Öğrenci ID alınamadı")
                 return
             }
 
@@ -98,7 +91,7 @@ struct VeliSeanslarimView: View {
                 .whereField("ogrenci_id", isEqualTo: ogrenciID)
                 .getDocuments { snap, error in
                     guard let docs = snap?.documents else {
-                        print("🔥 Seanslar yüklenemedi")
+                        print("🔥 Seanslar getirilemedi")
                         return
                     }
 
@@ -121,7 +114,7 @@ struct VeliSeanslarimView: View {
                             onaylandi: d["onaylandi"] as? Bool ?? false,
                             neden: d["neden"] as? String,
                             ogrenciID: d["ogrenci_id"] as? String ?? "",
-                            ogretmenID: d["ogretmen_id"] as? String ?? ""
+                            ogretmenID: d["ogretmen_ismi"] as? String ?? "Öğretmen"
                         )
 
                         tumTarihler.insert(displayTarih)
