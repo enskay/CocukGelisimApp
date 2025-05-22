@@ -81,7 +81,9 @@ struct AdminSeansListView: View {
                         onaylandi: d["onaylandi"] as? Bool ?? false,
                         neden: d["neden"] as? String,
                         ogrenciID: d["ogrenci_id"] as? String ?? "",
-                        ogretmenID: d["ogretmen_id"] as? String ?? ""
+                        ogretmenID: d["ogretmen_id"] as? String ?? "",
+                        ogretmenIsmi: d["ogretmen_ismi"] as? String ?? "-" // ✅ bunu ekle
+
                     )
                 }
 

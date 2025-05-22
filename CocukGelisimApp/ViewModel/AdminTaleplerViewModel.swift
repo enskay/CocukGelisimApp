@@ -1,56 +1,67 @@
+// AdminTaleplerViewModel.swift
 import Foundation
 import FirebaseFirestore
 
-
 class AdminTaleplerViewModel: ObservableObject {
-    @Published var talepler: [SeansTalebi] = []
-    private let db = Firestore.firestore()
+    @Published var talepler: [OgretmenSeansTalebi] = []
 
     func talepleriYukle() {
-        db.collection("seans_talepleri").getDocuments { snapshot, _ in
-            guard let docs = snapshot?.documents else { return }
+        Firestore.firestore().collection("seans_talepleri").getDocuments { snapshot, error in
+            guard let docs = snapshot?.documents else {
+                self.talepler = []
+                return
+            }
 
-            self.talepler = docs.map { doc in
+            self.talepler = docs.compactMap { doc in
                 let d = doc.data()
-                return SeansTalebi(
+                let isim = d["ogrenci_ismi"] as? String ?? "-"
+                return OgretmenSeansTalebi(
                     id: doc.documentID,
-                    ogrenciID: d["ogrenci_id"] as? String ?? "",
-                    ogrenciIsmi: d["ogrenci_ismi"] as? String ?? "-",
                     tarih: d["tarih"] as? String ?? "-",
-                    neden: d["neden"] as? String ?? ""
+                    saat: d["saat"] as? String ?? "-",
+                    ogrenciID: d["ogrenci_id"] as? String ?? "",
+                    ogrenciIsmi: isim.isEmpty ? "Bilinmiyor" : isim,
+                    ogretmenID: d["ogretmen_id"] as? String ?? "",
+                    ogretmenIsmi: d["ogretmen_ismi"] as? String ?? "-",
+                    tur: d["tur"] as? String ?? "-"
                 )
             }
         }
     }
 
-    func onaylaKaydi(talep: SeansTalebi, ogretmenID: String) {
-        let yeniSeans: [String: Any] = [
+    func talebiOnayla(talep: OgretmenSeansTalebi, completion: @escaping (Bool) -> Void) {
+        let seansVeri: [String: Any] = [
             "tarih": talep.tarih,
-            "saat": "Belirlenmedi",
+            "saat": talep.saat,
             "ogrenci_id": talep.ogrenciID,
             "ogrenci_ismi": talep.ogrenciIsmi,
-            "tur": "Birebir",
+            "ogretmen_id": talep.ogretmenID,
+            "ogretmen_ismi": talep.ogretmenIsmi,
+            "tur": talep.tur,
             "durum": "bekliyor",
-            "onaylandi": true,
-            "ogretmen_id": ogretmenID,
-            "neden": talep.neden
+            "onaylandi": true
         ]
 
-        db.collection("seanslar").addDocument(data: yeniSeans) { err in
-            if err == nil {
-                self.db.collection("seans_talepleri").document(talep.id).delete()
-                DispatchQueue.main.async {
-                    self.talepler.removeAll { $0.id == talep.id }
-                }
+        let db = Firestore.firestore()
+        db.collection("seanslar").addDocument(data: seansVeri) { error in
+            if error == nil {
+                db.collection("seans_talepleri").document(talep.id).delete()
+                self.talepleriYukle()
+                completion(true)
+            } else {
+                completion(false)
             }
         }
     }
 
-    func reddet(talep: SeansTalebi) {
-        db.collection("seans_talepleri").document(talep.id).delete { _ in
-            DispatchQueue.main.async {
-                self.talepler.removeAll { $0.id == talep.id }
+    func talebiReddet(talep: OgretmenSeansTalebi, completion: @escaping (Bool) -> Void) {
+        Firestore.firestore().collection("seans_talepleri").document(talep.id).delete { error in
+            if error == nil {
+                self.talepleriYukle()
+                completion(true)
+            } else {
+                completion(false)
             }
         }
     }
-}
+} 

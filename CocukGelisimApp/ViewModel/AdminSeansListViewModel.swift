@@ -3,79 +3,56 @@ import FirebaseFirestore
 
 class AdminSeansListViewModel: ObservableObject {
     @Published var seanslar: [Seans] = []
-    @Published var ogretmenFiltre: String = "Tümü" // "Tümü", "Alper", "Elif"
-
-    private let db = Firestore.firestore()
+    @Published var ogretmenFiltre: String = "Tümü"  // "Alper", "Elif", "Tümü"
 
     func seanslariYukle() {
-        db.collection("seanslar").getDocuments { snapshot, error in
-            guard let docs = snapshot?.documents else { return }
+        let db = Firestore.firestore()
 
-            DispatchQueue.main.async {
-                let filtrelenmis: [Seans] = docs.compactMap { doc in
-                    let d = doc.data()
-                    let ogretmenID = d["ogretmen_id"] as? String ?? ""
+        db.collection("seanslar")
+            .order(by: "tarih", descending: false)
+            .getDocuments { snapshot, error in
+                guard let documents = snapshot?.documents else {
+                    print("❌ Seanslar getirilemedi")
+                    return
+                }
 
-                    // Öğretmen filtreleme
-                    if self.ogretmenFiltre == "Alper", ogretmenID != "ZZ3PM4pTkEefhmcm6JB4BXsltgu2" { return nil }
-                    if self.ogretmenFiltre == "Elif", ogretmenID != "TVLwEsZhJuUUQrUpRSKk1jiufBv2" { return nil }
+                var tumSeanslar: [Seans] = []
 
-                    return Seans(
+                for doc in documents {
+                    let data = doc.data()
+
+                    let seans = Seans(
                         id: doc.documentID,
-                        ogrenciIsmi: d["ogrenci_ismi"] as? String ?? "-",
-                        tarih: d["tarih"] as? String ?? "-",
-                        saat: d["saat"] as? String ?? "--:--",
-                        tur: d["tur"] as? String ?? "-",
-                        durum: d["durum"] as? String ?? "bekliyor",
-                        onaylandi: d["onaylandi"] as? Bool ?? false,
-                        neden: d["neden"] as? String,
-                        ogrenciID: d["ogrenci_id"] as? String ?? "",
-                        ogretmenID: ogretmenID
+                        ogrenciIsmi: data["ogrenci_ismi"] as? String ?? "-",
+                        tarih: data["tarih"] as? String ?? "-",
+                        saat: data["saat"] as? String ?? "--:--",
+                        tur: data["tur"] as? String ?? "-",
+                        durum: data["durum"] as? String ?? "bekliyor",
+                        onaylandi: data["onaylandi"] as? Bool ?? false,
+                        neden: data["neden"] as? String,
+                        ogrenciID: data["ogrenci_id"] as? String ?? "",
+                        ogretmenID: data["ogretmen_id"] as? String ?? "",
+                        ogretmenIsmi: data["ogretmen_ismi"] as? String ?? "-"
                     )
+
+                    tumSeanslar.append(seans)
                 }
 
-                self.seanslar = filtrelenmis
-            }
-        }
-    }
-
-    func sadeceSeansiSil(seansID: String) {
-        db.collection("seanslar").document(seansID).delete()
-    }
-
-    func seansiSilVeErtelemeDusur(seans: Seans) {
-        db.collection("seanslar").document(seans.id).delete()
-
-        if seans.tur == "Grup" {
-            let ogrenciRef = db.collection("ogrenciler").document(seans.ogrenciID)
-            ogrenciRef.getDocument { doc, _ in
-                if let data = doc?.data(),
-                   var kalan = data["kalan_erteleme"] as? Int {
-                    kalan = max(kalan - 1, 0)
-                    ogrenciRef.updateData(["kalan_erteleme": kalan])
-                }
-            }
-        }
-    }
-
-    func seansDurumuGuncelle(seansID: String, yeniDurum: String, ogrenciID: String) {
-        db.collection("seanslar").document(seansID).updateData(["durum": yeniDurum])
-
-        if yeniDurum == "ertelendi" {
-            db.collection("seanslar").document(seansID).getDocument { docSnap, _ in
-                guard let data = docSnap?.data(),
-                      let tur = data["tur"] as? String,
-                      tur == "Grup" else { return }
-
-                let ogrenciRef = self.db.collection("ogrenciler").document(ogrenciID)
-                ogrenciRef.getDocument { snap, _ in
-                    if let oData = snap?.data(),
-                       var kalan = oData["kalan_erteleme"] as? Int {
-                        kalan = max(kalan - 1, 0)
-                        ogrenciRef.updateData(["kalan_erteleme": kalan])
+                // 🔍 Filtre uygula
+                let filtreliSeanslar = tumSeanslar.filter { seans in
+                    switch self.ogretmenFiltre {
+                    case "Alper":
+                        return seans.ogretmenID == "ZZ3PM4pTkEefhmcm6JB4BXsltgu2"
+                    case "Elif":
+                        return seans.ogretmenID == "TVLwEsZhJuUUQrUpRSKk1jiufBv2"
+                    default:
+                        return true
                     }
                 }
+
+                DispatchQueue.main.async {
+                    self.seanslar = filtreliSeanslar
+                }
             }
-        }
     }
 }

@@ -1,45 +1,82 @@
 import SwiftUI
-import FirebaseAuth
 import FirebaseFirestore
 
 struct VeliTakvimView: View {
-    @StateObject private var viewModel = VeliTalepViewModel()
+    @StateObject private var viewModel: VeliTalepViewModel
     @State private var secilenTarih = Date()
-    @State private var neden = ""
-    @State private var ogrenciID = ""
-    @State private var ogrenciIsmi = ""
+    @State private var secilenSaat = ""
+    @State private var secilenOgretmenID = ""
+    @State private var secilenOgretmenIsmi = ""
+    @State private var secilenTur = "Birebir"
     @State private var talepBasarili = false
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+
+    let seansTurleri = ["Birebir", "Grup"]
+
+    init(veliID: String) {
+        _viewModel = StateObject(wrappedValue: VeliTalepViewModel(veliID: veliID))
+    }
 
     var body: some View {
-        VStack(spacing: 20) {
-            DatePicker("Tarih Seç", selection: $secilenTarih, displayedComponents: .date)
+        VStack(spacing: 16) {
+            DatePicker("Tarih Seç", selection: $secilenTarih, in: Date()..., displayedComponents: .date)
                 .datePickerStyle(.graphical)
-                .onChange(of: secilenTarih) { _ in
-                    fetchOgrenciBilgisi()
+                .padding(.horizontal)
+
+            Picker("Öğretmen Seç", selection: $secilenOgretmenID) {
+                ForEach(viewModel.ogretmenler, id: \.id) { ogretmen in
+                    Text(ogretmen.isim).tag(ogretmen.id)
                 }
+            }
+            .onChange(of: secilenOgretmenID) { yeniID in
+                if let secili = viewModel.ogretmenler.first(where: { $0.id == yeniID }) {
+                    secilenOgretmenIsmi = secili.isim
+                    viewModel.doluSaatleriYukle(tarih: tarihStr(), ogretmenID: yeniID)
+                }
+            }
+            .pickerStyle(.menu)
+            .padding(.horizontal)
 
-            if viewModel.doluTarihler.contains(tarihStr()) {
-                Text("Bu gün dolu. Talep gönderemezsiniz.")
-                    .foregroundColor(.red)
-            } else {
-                TextField("İsteğe bağlı: Neden belirtebilirsiniz...", text: $neden)
-                    .textFieldStyle(.roundedBorder)
+            Picker("Seans Türü", selection: $secilenTur) {
+                ForEach(seansTurleri, id: \.self) { tur in
+                    Text(tur).tag(tur)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
 
-                Button("Seans Talebi Gönder") {
-                    viewModel.talepGonder(
-                        tarih: tarihStr(),
-                        neden: neden,
-                        ogrenciID: ogrenciID,
-                        ogrenciIsmi: ogrenciIsmi
-                    ) { basarili in
-                        talepBasarili = basarili
+            Text("Seans Saati Seç")
+                .font(.headline)
+
+            Picker("Saat Seç", selection: $secilenSaat) {
+                ForEach(viewModel.tumSaatler, id: \.self) { saat in
+                    if viewModel.doluSaatler.contains(saat) {
+                        Text("\(saat) (Dolu)").foregroundColor(.gray)
+                    } else {
+                        Text(saat).tag(saat)
+                    }
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(height: 100)
+
+            if !secilenSaat.isEmpty {
+                Button("Talebi Gönder") {
+                    if viewModel.doluSaatler.contains(secilenSaat) {
+                        alertMessage = "Bu saat zaten dolu. Lütfen başka bir saat seçin."
+                        showAlert = true
+                    } else {
+                        alertMessage = "\(tarihStr()) tarihinde saat \(secilenSaat)’de \(secilenOgretmenIsmi) öğretmene '\(secilenTur)' seans talebi göndermek istiyor musunuz?"
+                        showAlert = true
                     }
                 }
                 .buttonStyle(.borderedProminent)
+                .padding(.top)
             }
 
             if talepBasarili {
-                Text("✅ Talebiniz başarıyla gönderildi.")
+                Text("✅ Talebiniz gönderildi.")
                     .foregroundColor(.green)
             }
 
@@ -47,8 +84,43 @@ struct VeliTakvimView: View {
         }
         .padding()
         .onAppear {
-            viewModel.doluGunleriYukle()
-            fetchOgrenciBilgisi()
+            viewModel.ogretmenleriYukle {
+                if let ilk = viewModel.ogretmenler.first {
+                    secilenOgretmenID = ilk.id
+                    secilenOgretmenIsmi = ilk.isim
+                    viewModel.doluSaatleriYukle(tarih: tarihStr(), ogretmenID: ilk.id)
+                }
+            }
+        }
+        .alert(isPresented: $showAlert) {
+            if viewModel.doluSaatler.contains(secilenSaat) {
+                return Alert(
+                    title: Text("Uyarı"),
+                    message: Text(alertMessage),
+                    dismissButton: .default(Text("Seans Seç"))
+                )
+            } else {
+                return Alert(
+                    title: Text("Onay"),
+                    message: Text(alertMessage),
+                    primaryButton: .cancel(Text("Vazgeç")),
+                    secondaryButton: .default(Text("Gönder")) {
+                        viewModel.talepGonder(
+                            tarih: tarihStr(),
+                            saat: secilenSaat,
+                            ogretmenID: secilenOgretmenID,
+                            ogretmenIsmi: secilenOgretmenIsmi,
+                            tur: secilenTur
+                        ) { basarili in
+                            if basarili {
+                                talepBasarili = true
+                                secilenSaat = ""
+                                viewModel.doluSaatleriYukle(tarih: tarihStr(), ogretmenID: secilenOgretmenID)
+                            }
+                        }
+                    }
+                )
+            }
         }
         .navigationTitle("Takvim")
     }
@@ -57,16 +129,5 @@ struct VeliTakvimView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: secilenTarih)
-    }
-
-    private func fetchOgrenciBilgisi() {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
-        let db = Firestore.firestore()
-
-        db.collection("veliler").document(uid).getDocument { doc, _ in
-            let data = doc?.data()
-            self.ogrenciID = data?["ogrenci_id"] as? String ?? ""
-            self.ogrenciIsmi = data?["ogrenci_ismi"] as? String ?? "-"
-        }
     }
 }

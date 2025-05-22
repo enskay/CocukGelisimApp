@@ -27,7 +27,7 @@ struct AdminTabView: View {
                     Label("Öğrenciler", systemImage: "person.3")
                 }
 
-            // ✅ İşlemler sekmesi
+            // 🔧 İşlemler sekmesi (çıkış burada)
             NavigationStack {
                 VStack(spacing: 30) {
                     NavigationLink("👨‍👩‍👧 Yeni Kayıt Oluştur", destination: VeliKayitView())
@@ -45,7 +45,7 @@ struct AdminTabView: View {
                 .alert("Çıkmak istediğinize emin misiniz?", isPresented: $cikisAlert) {
                     Button("İptal", role: .cancel) {}
                     Button("Çıkış Yap", role: .destructive) {
-                        loginVM.signOut()
+                        loginVM.cikisYap()  // ✅ burada düzeltildi
                     }
                 }
             }

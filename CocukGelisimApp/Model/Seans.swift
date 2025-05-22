@@ -1,5 +1,3 @@
-import Foundation
-
 struct Seans: Identifiable {
     let id: String
     let ogrenciIsmi: String
@@ -11,8 +9,8 @@ struct Seans: Identifiable {
     let neden: String?
     let ogrenciID: String
     let ogretmenID: String
+    let ogretmenIsmi: String  // ✅ yeni eklendi
 
-    // 🔁 Manuel initializer (ogrenciID en sonda!)
     init(
         id: String,
         ogrenciIsmi: String,
@@ -23,7 +21,8 @@ struct Seans: Identifiable {
         onaylandi: Bool,
         neden: String? = nil,
         ogrenciID: String,
-        ogretmenID: String
+        ogretmenID: String,
+        ogretmenIsmi: String
     ) {
         self.id = id
         self.ogrenciIsmi = ogrenciIsmi
@@ -35,5 +34,6 @@ struct Seans: Identifiable {
         self.neden = neden
         self.ogrenciID = ogrenciID
         self.ogretmenID = ogretmenID
+        self.ogretmenIsmi = ogretmenIsmi
     }
 }

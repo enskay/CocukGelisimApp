@@ -1,95 +1,71 @@
 import SwiftUI
-import FirebaseFirestore
-
-
 
 struct AdminTaleplerView: View {
-    @State private var talepler: [SeansTalebi] = []
-    @State private var aramaMetni: String = ""
+    @StateObject private var viewModel = AdminTaleplerViewModel()
+    @State private var seciliTalep: OgretmenSeansTalebi?
+    @State private var onayAlertGoster = false
+    @State private var redAlertGoster = false
 
     var body: some View {
-        VStack {
-            TextField("Öğrenci adına göre ara...", text: $aramaMetni)
-                .textFieldStyle(.roundedBorder)
-                .padding(.horizontal)
-
+        NavigationStack {
             List {
-                ForEach(talepler.filter {
-                    aramaMetni.isEmpty || $0.ogrenciIsmi.lowercased().contains(aramaMetni.lowercased())
-                }) { talep in
+                ForEach(viewModel.talepler) { talep in
                     VStack(alignment: .leading, spacing: 6) {
                         Text("👶 Öğrenci: \(talep.ogrenciIsmi)")
-                        Text("📅 Tarih: \(talep.tarih)")
-                        if !talep.neden.isEmpty {
-                            Text("📝 Neden: \(talep.neden)").foregroundColor(.gray)
-                        }
-
+                        Text("👩‍🏫 Öğretmen: \(talep.ogretmenIsmi)")
+                        Text("📆 Tarih: \(tarihGoster(talep.tarih))")
+                        Text("🕒 Saat: \(talep.saat)")
+                        Text("🎯 Tür: \(talep.tur)")
                         HStack {
                             Button("✅ Onayla") {
-                                seansaCevir(talep: talep)
+                                seciliTalep = talep
+                                onayAlertGoster = true
                             }
                             .buttonStyle(.borderedProminent)
 
-                            Button("❌ Sil") {
-                                talebiSil(talep: talep)
+                            Button("❌ Reddet") {
+                                seciliTalep = talep
+                                redAlertGoster = true
                             }
                             .buttonStyle(.bordered)
-                            .foregroundColor(.red)
                         }
-                        .padding(.top, 4)
                     }
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 8)
                 }
             }
-        }
-        .navigationTitle("Seans Talepleri")
-        .onAppear {
-            talepleriYukle()
-        }
-    }
-
-    private func talepleriYukle() {
-        let db = Firestore.firestore()
-        db.collection("seans_talepleri").getDocuments { snap, error in
-            guard let docs = snap?.documents else { return }
-
-            self.talepler = docs.compactMap { doc in
-                let d = doc.data()
-                return SeansTalebi(
-                    id: doc.documentID,
-                    ogrenciID: d["ogrenci_id"] as? String ?? "",
-                    ogrenciIsmi: d["ogrenci_ismi"] as? String ?? "-",
-                    tarih: d["tarih"] as? String ?? "-",
-                    neden: d["neden"] as? String ?? ""
-                )
+            .navigationTitle("Seans Talepleri")
+            .onAppear {
+                viewModel.talepleriYukle()
+            }
+            .alert("Seans Talebini Onayla", isPresented: $onayAlertGoster, presenting: seciliTalep) { talep in
+                Button("İptal", role: .cancel) {}
+                Button("Onayla", role: .destructive) {
+                    viewModel.talebiOnayla(talep: talep) { _ in }
+                }
+            } message: { talep in
+                Text("\(tarihGoster(talep.tarih)) saat \(talep.saat)'de \(talep.ogrenciIsmi) için birebir seans onaylansın mı?")
+            }
+            .alert("Seans Talebini Reddet", isPresented: $redAlertGoster, presenting: seciliTalep) { talep in
+                Button("İptal", role: .cancel) {}
+                Button("Reddet", role: .destructive) {
+                    viewModel.talebiReddet(talep: talep) { _ in }
+                }
+            } message: { talep in
+                Text("\(tarihGoster(talep.tarih)) saat \(talep.saat)'deki talep reddedilsin mi?")
             }
         }
     }
 
-    private func seansaCevir(talep: SeansTalebi) {
-        let db = Firestore.firestore()
+    private func tarihGoster(_ tarih: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
 
-        let yeniSeans: [String: Any] = [
-            "tarih": talep.tarih,
-            "saat": "Belirlenmedi",
-            "ogrenci_id": talep.ogrenciID,
-            "ogrenci_ismi": talep.ogrenciIsmi,
-            "tur": "Birebir",
-            "durum": "bekliyor",
-            "onaylandi": true
-        ]
-
-        db.collection("seanslar").addDocument(data: yeniSeans) { error in
-            if error == nil {
-                talebiSil(talep: talep)
-            }
+        if let date = formatter.date(from: tarih) {
+            let display = DateFormatter()
+            display.locale = Locale(identifier: "tr_TR")
+            display.dateFormat = "dd MMMM yyyy, EEEE"
+            return display.string(from: date)
         }
-    }
-
-    private func talebiSil(talep: SeansTalebi) {
-        let db = Firestore.firestore()
-        db.collection("seans_talepleri").document(talep.id).delete { _ in
-            talepler.removeAll { $0.id == talep.id }
-        }
+        return tarih
     }
 }

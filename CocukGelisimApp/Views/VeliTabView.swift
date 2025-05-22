@@ -4,6 +4,7 @@ import FirebaseAuth
 struct VeliTabView: View {
     @EnvironmentObject var loginVM: LoginViewModel
     @State private var cikisAlert = false
+    let veliID: String
 
     var body: some View {
         TabView {
@@ -17,7 +18,7 @@ struct VeliTabView: View {
                     Label("Seanslarım", systemImage: "calendar")
                 }
 
-            VeliTakvimView()
+            VeliTakvimView(veliID: veliID)
                 .tabItem {
                     Label("Takvim", systemImage: "calendar.circle")
                 }
@@ -33,7 +34,7 @@ struct VeliTabView: View {
                 .alert("Çıkmak istediğinize emin misiniz?", isPresented: $cikisAlert) {
                     Button("İptal", role: .cancel) {}
                     Button("Çıkış Yap", role: .destructive) {
-                        loginVM.signOut()
+                        loginVM.cikisYap()
                     }
                 }
                 Spacer()
@@ -42,5 +43,9 @@ struct VeliTabView: View {
                 Label("Çıkış", systemImage: "rectangle.portrait.and.arrow.right")
             }
         }
+    }
+
+    init(veliID: String) {
+        self.veliID = veliID
     }
 }

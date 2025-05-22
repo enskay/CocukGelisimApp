@@ -40,7 +40,8 @@ class AdminMainViewModel: ObservableObject {
                     onaylandi: data["onaylandi"] as? Bool ?? false,
                     neden: data["neden"] as? String,
                     ogrenciID: data["ogrenci_id"] as? String ?? "",
-                    ogretmenID: data["ogretmen_id"] as? String ?? ""
+                    ogretmenID: data["ogretmen_id"] as? String ?? "",
+                    ogretmenIsmi: data["ogretmen_ismi"] as? String ?? "-"
                 )
             }
         }

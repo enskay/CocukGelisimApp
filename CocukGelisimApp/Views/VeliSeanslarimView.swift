@@ -64,7 +64,7 @@ struct VeliSeanslarimView: View {
     private func seansKart(seans: Seans) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("🕒 Saat: \(seans.saat)")
-            Text("👩‍🏫 Öğretmen: \(seans.ogretmenID)")
+            Text("👩‍🏫 Öğretmen: \(seans.ogretmenIsmi)")
         }
         .padding()
         .background(Color.orange.opacity(0.15))
@@ -114,7 +114,8 @@ struct VeliSeanslarimView: View {
                             onaylandi: d["onaylandi"] as? Bool ?? false,
                             neden: d["neden"] as? String,
                             ogrenciID: d["ogrenci_id"] as? String ?? "",
-                            ogretmenID: d["ogretmen_ismi"] as? String ?? "Öğretmen"
+                            ogretmenID: d["ogretmen_id"] as? String ?? "",
+                            ogretmenIsmi: d["ogretmen_ismi"] as? String ?? "Öğretmen"
                         )
 
                         tumTarihler.insert(displayTarih)

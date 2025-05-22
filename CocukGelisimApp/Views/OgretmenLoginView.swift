@@ -27,7 +27,7 @@ struct OgretmenLoginView: View {
                 .textFieldStyle(.roundedBorder)
             // Giriş yap butonu
             Button("Giriş Yap") {
-                loginVM.signIn()
+                loginVM.signInAdmin()
             }
             .buttonStyle(.borderedProminent)
             .padding(.top, 10)

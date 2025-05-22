@@ -14,12 +14,10 @@ struct AdminTakvimView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            // 📅 Tarih Seçimi
             DatePicker("Tarih Seç", selection: $secilenTarih, displayedComponents: .date)
                 .datePickerStyle(.graphical)
                 .padding(.horizontal)
 
-            // 👨‍🏫 Öğretmen Seçimi
             Picker("Öğretmen Seç", selection: $secilenOgretmen) {
                 ForEach(ogretmenler, id: \.self) { ogretmen in
                     Text(ogretmen).tag(ogretmen)
@@ -30,14 +28,12 @@ struct AdminTakvimView: View {
 
             Divider()
 
-            // 📋 Seanslar Başlığı
             Text("📅 \(formattedTarih(secilenTarih)) Seansları")
                 .font(.title3)
                 .bold()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
 
-            // 📋 Seans Listesi
             if gunlukSeanslar.isEmpty {
                 VStack {
                     Spacer(minLength: 50)
@@ -120,7 +116,8 @@ struct AdminTakvimView: View {
                     onaylandi: d["onaylandi"] as? Bool ?? false,
                     neden: d["neden"] as? String,
                     ogrenciID: d["ogrenci_id"] as? String ?? "",
-                    ogretmenID: d["ogretmen_id"] as? String ?? ""
+                    ogretmenID: d["ogretmen_id"] as? String ?? "",
+                    ogretmenIsmi: d["ogretmen_ismi"] as? String ?? "-"
                 )
             }
         }

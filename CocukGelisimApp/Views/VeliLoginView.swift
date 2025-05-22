@@ -1,11 +1,3 @@
-//
-//  VeliLoginView.swift
-//  CocukGelisimApp
-//
-//  Created by Ekrem on 8.05.2025.
-//
-
-
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
@@ -14,6 +6,7 @@ struct VeliLoginView: View {
     @State private var girisKodu = ""
     @State private var hataMesaji = ""
     @State private var girisBasarili = false
+    @State private var veliID = ""
 
     var body: some View {
         VStack(spacing: 30) {
@@ -35,7 +28,7 @@ struct VeliLoginView: View {
             }
             .buttonStyle(.borderedProminent)
 
-            NavigationLink(destination: VeliTabView(), isActive: $girisBasarili) {
+            NavigationLink(destination: VeliTabView(veliID: veliID), isActive: $girisBasarili) {
                 EmptyView()
             }
         }
@@ -58,8 +51,7 @@ struct VeliLoginView: View {
                     return
                 }
 
-                // Veli giriş başarılı: UID kaydet
-                UserDefaults.standard.set(userDoc.documentID, forKey: "veliUID")
+                self.veliID = userDoc.documentID
                 self.girisBasarili = true
             }
     }
