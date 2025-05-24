@@ -5,85 +5,90 @@ struct VeliFotoDetayView: View {
     @State var currentIndex: Int
 
     var body: some View {
-        let foto = fotograflar[currentIndex]
+        ZStack {
+            BackgroundImageView()
+            VStack(spacing: 20) {
+                // Başlık
+                Text(fotograflar[currentIndex].baslik)
+                    .font(.title2.bold())
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 12)
 
-        VStack(spacing: 20) {
-            Text(foto.baslik)
-                .font(.title2.bold())
-                .multilineTextAlignment(.center)
-                .padding(.top, 20)
-
-            ZStack {
-                // Fotoğraf
-                AsyncImage(url: URL(string: foto.url)) { phase in
-                    if let img = phase.image {
-                        img
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity, maxHeight: 340)
-                            .cornerRadius(20)
-                            .shadow(radius: 8)
-                            .padding(.horizontal, 32)
-                    } else {
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color(.systemGray5))
-                            .frame(height: 220)
-                            .overlay(ProgressView())
-                            .padding(.horizontal, 32)
+                // Fotoğraf / ProgressView yükseklik korumalı!
+                ZStack {
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color.white)
+                        .shadow(radius: 6)
+                        .frame(width: 330, height: 330)
+                    AsyncImage(url: URL(string: fotograflar[currentIndex].url)) { phase in
+                        if let img = phase.image {
+                            img
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 310, height: 310)
+                                .cornerRadius(20)
+                        } else if phase.error != nil {
+                            Color.gray.opacity(0.2)
+                                .frame(width: 310, height: 310)
+                        } else {
+                            ProgressView()
+                                .frame(width: 310, height: 310)
+                        }
                     }
                 }
+                .frame(height: 340)
+                .padding(.vertical, 2)
 
-                // Sade Oklar
+                // Açıklama: Sevimli kutucuk içinde, yazı da tatlı!
                 HStack {
+                    Spacer()
+                    Text(fotograflar[currentIndex].aciklama)
+                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                        .foregroundColor(.susuMor)
+                        .multilineTextAlignment(.center)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 22)
+                                .fill(Color.susuMavi.opacity(0.17))
+                                .shadow(radius: 2, y: 2)
+                        )
+                        .frame(maxWidth: 370)
+                    Spacer()
+                }
+                .padding(.vertical, 2)
+
+                // Ok butonları sabit!
+                HStack(spacing: 32) {
                     Button {
                         if currentIndex > 0 { currentIndex -= 1 }
                     } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 38, weight: .bold))
-                            .foregroundColor(.gray.opacity(currentIndex == 0 ? 0.3 : 0.8))
-                            .padding(10)
-                            .background(
-                                Circle()
-                                    .fill(Color.white.opacity(0.85))
-                                    .shadow(radius: 2)
-                            )
+                        Image(systemName: "chevron.left.circle.fill")
+                            .resizable()
+                            .frame(width: 38, height: 38)
+                            .foregroundColor(.susuMavi)
+                            .opacity(currentIndex == 0 ? 0.5 : 1)
                     }
                     .disabled(currentIndex == 0)
-                    .padding(.leading, 8)
-
-                    Spacer()
 
                     Button {
                         if currentIndex < fotograflar.count - 1 { currentIndex += 1 }
                     } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 38, weight: .bold))
-                            .foregroundColor(.gray.opacity(currentIndex == fotograflar.count - 1 ? 0.3 : 0.8))
-                            .padding(10)
-                            .background(
-                                Circle()
-                                    .fill(Color.white.opacity(0.85))
-                                    .shadow(radius: 2)
-                            )
+                        Image(systemName: "chevron.right.circle.fill")
+                            .resizable()
+                            .frame(width: 38, height: 38)
+                            .foregroundColor(.susuMavi)
+                            .opacity(currentIndex == fotograflar.count-1 ? 0.5 : 1)
                     }
-                    .disabled(currentIndex == fotograflar.count - 1)
-                    .padding(.trailing, 8)
+                    .disabled(currentIndex == fotograflar.count-1)
                 }
-                .frame(maxWidth: .infinity, maxHeight: 340, alignment: .center)
+                .padding(.bottom, 8)
             }
-            .frame(height: 340)
-
-            // Açıklama
-            Text(foto.aciklama)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 14)
-                .padding(.top, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer()
+            .padding(.horizontal)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .background(Color(.systemGroupedBackground))
-        .ignoresSafeArea(.keyboard)
+        .navigationBarTitleDisplayMode(.inline)
+        // Kaydırarak geçiş için gesture eklemek istersen ekleyebilirsin.
     }
 }
