@@ -1,9 +1,9 @@
 import SwiftUI
-import FirebaseAuth
 
 struct AdminTabView: View {
     @EnvironmentObject var loginVM: LoginViewModel
     @State private var cikisAlert = false
+    @State private var showFotoYukle = false
 
     var body: some View {
         TabView {
@@ -27,11 +27,19 @@ struct AdminTabView: View {
                     Label("Öğrenciler", systemImage: "person.3")
                 }
 
-            // 🔧 İşlemler sekmesi (çıkış burada)
+            // İŞLEMLER/MORE TAB
             NavigationStack {
                 VStack(spacing: 30) {
                     NavigationLink("👨‍👩‍👧 Yeni Kayıt Oluştur", destination: VeliKayitView())
                         .buttonStyle(.borderedProminent)
+
+                    Button("🖼️ Fotoğraf Paylaş") {
+                        showFotoYukle = true
+                    }
+                    .buttonStyle(.borderedProminent)
+
+                    NavigationLink("🖼️ Fotoğrafları Yönet", destination: AdminFotoGaleriYonetimView())
+                        .buttonStyle(.bordered)
 
                     Button(role: .destructive) {
                         cikisAlert = true
@@ -45,8 +53,11 @@ struct AdminTabView: View {
                 .alert("Çıkmak istediğinize emin misiniz?", isPresented: $cikisAlert) {
                     Button("İptal", role: .cancel) {}
                     Button("Çıkış Yap", role: .destructive) {
-                        loginVM.cikisYap()  // ✅ burada düzeltildi
+                        loginVM.cikisYap()
                     }
+                }
+                .sheet(isPresented: $showFotoYukle) {
+                    AdminFotoYukleView()
                 }
             }
             .tabItem {

@@ -4,13 +4,16 @@ import FirebaseAuth
 
 struct VeliHomeView: View {
     @State private var ogrenciIsmi: String = "-"
-    @State private var hosgeldinMesaji: String = ""
+    @StateObject private var galeriVM = VeliFotoGaleriViewModel()
+    @State private var showGaleri = false
+    @State private var currentIndex = 0
+    let timer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
     
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // 👋 Hoş geldin mesajı
+                    // Hoş geldin mesajı
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Merhaba,")
                             .font(.title2)
@@ -25,45 +28,39 @@ struct VeliHomeView: View {
                     .shadow(radius: 3)
                     .padding(.horizontal)
                     
-                    // 📅 Bugünkü seans kutusu
+                    // Etkinliklerimiz Slider
                     HStack {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 24))
-                        VStack(alignment: .leading) {
-                            Text("Bugünkü Seans")
-                                .font(.headline)
-                            Text("🕒 Saat 14:00") // Örnek, gerçek veri sonra eklenebilir
-                        }
+                        Text("🎉 Etkinliklerimiz")
+                            .font(.title3.bold())
                         Spacer()
-                    }
-                    .padding()
-                    .background(Color.pastelYesil)
-                    .cornerRadius(16)
-                    .shadow(radius: 2)
-                    .padding(.horizontal)
-
-                    // 📰 Öğretmen Paylaşımları Butonu
-                    NavigationLink(destination: VeliPaylasimlarView()) {
-                        HStack {
-                            Image(systemName: "photo.on.rectangle")
-                                .font(.system(size: 24))
-                            VStack(alignment: .leading) {
-                                Text("Öğretmen Paylaşımları")
-                                    .font(.headline)
-                                Text("Fotoğraf ve yazılara göz at")
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
+                        Button("Tümünü Gör") {
+                            showGaleri = true
                         }
-                        .padding()
-                        .background(Color.pastelSari)
-                        .cornerRadius(16)
-                        .shadow(radius: 2)
+                        .font(.subheadline.bold())
                     }
                     .padding(.horizontal)
-
+                    
+                    if !galeriVM.fotograflar.isEmpty {
+                        TabView(selection: $currentIndex) {
+                            ForEach(Array(galeriVM.fotograflar.prefix(6).enumerated()), id: \.1.id) { idx, foto in
+                                VeliGaleriCardView(foto: foto)
+                                    .tag(idx)
+                                    .onTapGesture { showGaleri = true }
+                            }
+                        }
+                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+                        .frame(height: 200)
+                        .onReceive(timer) { _ in
+                            withAnimation {
+                                currentIndex = (currentIndex + 1) % min(galeriVM.fotograflar.count, 6)
+                            }
+                        }
+                    } else {
+                        Text("Henüz etkinlik/fotoğraf eklenmedi.")
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                    }
+                    
                     Spacer()
                 }
                 .padding(.top)
@@ -71,10 +68,14 @@ struct VeliHomeView: View {
             .navigationTitle("Ana Sayfa")
             .onAppear {
                 ogrenciIsminiYukle()
+                galeriVM.fotograflariYukle()
+            }
+            .sheet(isPresented: $showGaleri) {
+                VeliGaleriListView(galeriVM: galeriVM)
             }
         }
     }
-
+    
     private func ogrenciIsminiYukle() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         let db = Firestore.firestore()

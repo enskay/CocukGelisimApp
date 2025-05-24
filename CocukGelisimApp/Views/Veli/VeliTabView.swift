@@ -1,10 +1,9 @@
 import SwiftUI
-import FirebaseAuth
 
 struct VeliTabView: View {
-    @EnvironmentObject var loginVM: LoginViewModel
-    @State private var cikisAlert = false
     let veliID: String
+    let loginVM: LoginViewModel
+    @State private var cikisAlert = false
 
     var body: some View {
         TabView {
@@ -13,7 +12,7 @@ struct VeliTabView: View {
                     Label("Ana Sayfa", systemImage: "house")
                 }
 
-            VeliSeanslarimView()
+            VeliSeanslarimView(loginVM: loginVM)
                 .tabItem {
                     Label("Seanslarım", systemImage: "calendar")
                 }
@@ -43,9 +42,5 @@ struct VeliTabView: View {
                 Label("Çıkış", systemImage: "rectangle.portrait.and.arrow.right")
             }
         }
-    }
-
-    init(veliID: String) {
-        self.veliID = veliID
     }
 }

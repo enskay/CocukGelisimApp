@@ -11,20 +11,18 @@ struct CocukGelisimApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // Sadece burada NavigationStack olacak!
             if loginVM.isLoggedIn {
-                NavigationStack {
-                    if loginVM.isAdmin {
-                        AdminTabView()
-                    } else {
-                        VeliTabView(veliID: loginVM.currentVeliID ?? "")
-                    }
+                if loginVM.isAdmin {
+                    AdminTabView()
+                        .environmentObject(loginVM)
+                } else {
+                    VeliTabView(veliID: loginVM.currentVeliID ?? "", loginVM: loginVM)
+                        .environmentObject(loginVM)
                 }
-                .environmentObject(loginVM)
             } else {
-                NavigationStack {
-                    VeliKodGirisView()
-                }
-                .environmentObject(loginVM)
+                VeliKodGirisView()
+                    .environmentObject(loginVM)
             }
         }
     }

@@ -10,7 +10,7 @@ struct LoginView: View {
                     .font(.largeTitle.bold())
                 
                 VStack(spacing: 20) {
-                    NavigationLink(destination: OgretmenLoginView()) {
+                    NavigationLink(destination: AdminLoginView()) {
                         Text("👩‍🏫 Öğretmen Girişi")
                             .frame(maxWidth: .infinity)
                     }

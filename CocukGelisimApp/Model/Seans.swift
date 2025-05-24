@@ -9,7 +9,7 @@ struct Seans: Identifiable {
     let neden: String?
     let ogrenciID: String
     let ogretmenID: String
-    let ogretmenIsmi: String  // ✅ yeni eklendi
+    let ogretmenIsmi: String
 
     init(
         id: String,

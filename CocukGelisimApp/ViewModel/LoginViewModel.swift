@@ -17,12 +17,10 @@ class LoginViewModel: ObservableObject {
                 self?.hataMesaji = "Giriş Hatası: \(error.localizedDescription)"
                 return
             }
-
             guard let uid = result?.user.uid else {
                 self?.hataMesaji = "Kullanıcı ID alınamadı."
                 return
             }
-
             let db = Firestore.firestore()
             db.collection("ogretmenler").document(uid).getDocument { doc, error in
                 if let doc = doc, doc.exists {
@@ -35,27 +33,27 @@ class LoginViewModel: ObservableObject {
         }
     }
 
-    func signInWithCode(completion: @escaping () -> Void) {
+    func signInWithCode(completion: @escaping (Bool) -> Void) {
         let db = Firestore.firestore()
-
         db.collection("veliler")
             .whereField("giris_kodu", isEqualTo: girisKodu)
             .getDocuments { [weak self] snapshot, error in
                 if let error = error {
                     self?.hataMesaji = "Hata: \(error.localizedDescription)"
-                    completion()
+                    self?.isLoggedIn = false
+                    completion(false)
                     return
                 }
-
                 guard let doc = snapshot?.documents.first else {
                     self?.hataMesaji = "Kod bulunamadı."
-                    completion()
+                    self?.isLoggedIn = false
+                    completion(false)
                     return
                 }
-
                 self?.currentVeliID = doc.documentID
                 self?.isLoggedIn = true
-                completion()
+                self?.hataMesaji = ""
+                completion(true)
             }
     }
 

@@ -6,39 +6,38 @@ struct AdminOgrencilerView: View {
     @State private var loading = true
 
     var body: some View {
-        VStack {
-            if loading {
-                ProgressView("Yükleniyor...")
-                    .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                    .scaleEffect(1.5)
-            } else {
-                List(ogrenciler) { ogrenci in
-                    NavigationLink(destination: OgrenciDetayView(ogrenciID: ogrenci.ogrenciID)) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("👶 Öğrenci: \(ogrenci.ogrenciIsmi)")
-                                .font(.headline)
-                            Text("🎂 Yaş: \(ogrenci.yas) Ay")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            Text("👩‍👧‍👦 Veli: \(ogrenci.veliIsmi)")
-                                .font(.subheadline)
-                            Text("🔐 Kod: \(ogrenci.girisKodu)")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+        NavigationStack { // <-- NavigationStack mutlaka olmalı
+            VStack {
+                if loading {
+                    ProgressView("Yükleniyor...")
+                        .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                        .scaleEffect(1.5)
+                } else {
+                    List(ogrenciler) { ogrenci in
+                        NavigationLink(destination: OgrenciDetayView(ogrenciID: ogrenci.ogrenciID)) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("👶 Öğrenci: \(ogrenci.ogrenciIsmi)")
+                                    .font(.headline)
+                                Text("🎂 Yaş: \(ogrenci.yas) Ay")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Text("👩‍👧‍👦 Veli: \(ogrenci.veliIsmi)")
+                                    .font(.subheadline)
+                                Text("🔐 Kod: \(ogrenci.girisKodu)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.vertical, 6)
                         }
-                        .padding()
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(radius: 4)
                     }
+                    .listStyle(.plain)
+                    .background(Color(.systemGroupedBackground))
                 }
-                .listStyle(.plain)
-                .background(Color(.systemGroupedBackground))
             }
-        }
-        .navigationTitle("Öğrenciler")
-        .onAppear {
-            ogrencileriYukle()
+            .navigationTitle("Öğrenciler")
+            .onAppear {
+                ogrencileriYukle()
+            }
         }
     }
 
@@ -67,11 +66,11 @@ struct AdminOgrencilerView: View {
 
                     let model = OgrenciVeliBilgisi(
                         id: doc.documentID,
-                           ogrenciID: ogrenciID,
-                           veliIsmi: veliIsmi,
-                           girisKodu: girisKodu,
-                           ogrenciIsmi: ogrenciIsmi,
-                           yas: yasAy
+                        ogrenciID: ogrenciID,
+                        veliIsmi: veliIsmi,
+                        girisKodu: girisKodu,
+                        ogrenciIsmi: ogrenciIsmi,
+                        yas: yasAy
                     )
                     tempListe.append(model)
                 }
