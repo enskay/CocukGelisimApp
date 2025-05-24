@@ -10,21 +10,16 @@ struct VeliGaleriCardView: View {
                     img
                         .resizable()
                         .scaledToFill()
-                        .frame(height: 180)
+                        .frame(height: 170)
                         .clipped()
                 } else if phase.error != nil {
-                    Color.red.opacity(0.2)
+                    Color.gray.opacity(0.3)
                 } else {
-                    ProgressView().frame(height: 180)
+                    ProgressView().frame(height: 170)
                 }
             }
-            LinearGradient(
-                gradient: Gradient(colors: [Color.black.opacity(0.35), Color.clear]),
-                startPoint: .bottom,
-                endPoint: .top
-            )
-            .frame(height: 70)
-
+            LinearGradient(gradient: Gradient(colors: [Color.black.opacity(0.22), .clear]), startPoint: .bottom, endPoint: .top)
+                .frame(height: 60)
             VStack(alignment: .leading) {
                 Text(foto.baslik)
                     .font(.headline)
@@ -33,10 +28,10 @@ struct VeliGaleriCardView: View {
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.8))
             }
-            .padding()
+            .padding(10)
         }
-        .cornerRadius(18)
+        .cornerRadius(20)
         .shadow(radius: 5)
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 5)
     }
 }
